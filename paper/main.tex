@@ -1,0 +1,1417 @@
+\documentclass[11pt]{amsart}
+\pdfsuppressptexinfo=-1
+\usepackage[margin=1.1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs,enumitem,array}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={Certified lower bounds on the optimal-decoding threshold of the surface code},pdfauthor={Tejasvi Singh Tomar}}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\numberwithin{equation}{section}
+\setlength{\emergencystretch}{2em}
+
+\newcommand{\Pfail}{P_{\mathrm{fail}}}
+\newcommand{\pst}{p_\ast}
+\newcommand{\dX}{\delta^{X}}
+\newcommand{\dZ}{\delta^{Z}}
+\newcommand{\cD}{\mathcal{D}}
+\newcommand{\cF}{\mathcal{F}}
+\newcommand{\ver}{\textsuperscript{\dag}}
+
+\newcommand{\PML}{P_{\mathrm{ML}}}
+\newcommand{\PMW}{P_{\mathrm{MW}}}
+\newcommand{\TV}{\operatorname{TV}}
+\newcommand{\Long}{\mathrm{Long}}
+\newcommand{\cut}{\mathrm{cut}}
+\newcommand{\inter}{\mathrm{int}}
+\newcommand{\core}{\mathrm{core}}
+\newcommand{\eL}{\varepsilon_{\mathrm{L}}}
+
+\begin{document}
+
+\title[Lower bounds on the surface-code threshold]{Certified lower bounds on the optimal-decoding threshold of the surface code}
+\author{Tejasvi Singh Tomar}
+\renewcommand{\urladdrname}{{\itshape ORCID}}
+\urladdr{\href{https://orcid.org/0000-0003-4668-3639}{https://orcid.org/0000-0003-4668-3639}}
+\date{October 2026}
+\subjclass[2020]{81P73; 94B35, 82B44, 62F25, 68V20}
+\keywords{Quantum error correction, surface code, toric code, threshold, maximum-likelihood decoding, minimum-weight matching, random-bond Ising model, Nishimori line, statistical certificate, computer-assisted proof, Lean}
+
+\begin{abstract}
+We give lower bounds on the code-capacity threshold of the surface code under independent bit flips. The best previous bound is $0.0373$, due to Dennis, Kitaev, Landahl and Preskill, while numerical work places the optimal threshold near $0.109$. For maximum-likelihood decoding of the planar code we give a statistical certificate: with confidence $1-2\times10^{-9}$, for every bit-flip probability $p\le 0.100$, decoding a code of distance $d$ and width $w$ fails with probability at most $422\,n_x e^{-0.2155(n_y-31)}+2\times10^{4}\,n_x e^{-0.02(n_y-31)}$, where $n_x=\max(5,\lceil w/280\rceil)$ and $n_y=\lfloor (d-1)/280\rfloor\ge32$; hence the optimal threshold of the planar code is at least $0.100$. The confidence statement assumes a binomial model of the Monte Carlo counts and two properties of the certified program that were tested in validation runs: its first stage reads only the syndrome, and it commutes with translations. The certificate concerns an auxiliary decoder that matches on window graphs weighted by exact window posteriors. A deterministic lemma reduces its failure to rare bad blocks of five types, and a pre-registered Monte Carlo run with $1.2\times10^{5}$ samples per type bounds their probabilities by $5\times10^{-4}$. Without sampling, we prove that every minimum-weight decoder with uniform weights, and hence maximum-likelihood decoding, has threshold at least $0.0465$ for the planar and rotated codes and at least $0.046$ for the toric code, and at least $0.016$ under phenomenological noise with faulty syndrome measurements, where the previous bound was $0.0114$. These proofs count the labelled failure paths of a canonical minimum-weight correction with exact transfer-matrix certificates. All these results are proved in the proof assistant Lean~4, the first with its three conditions as hypotheses, and each of them has a proof checked by Lean's kernel alone.
+\end{abstract}
+
+\maketitle
+
+\section{Introduction}\label{sec:intro}
+
+The surface code \cite{Kit03,DKLP02} stores a logical qubit reliably as long as the physical error rate stays below a threshold. In the simplest setting, code capacity, each qubit suffers a bit flip independently with probability $p$ and the syndrome is measured without error. Decoding one error sector is then a problem on a planar graph. For optimal decoding, which picks the most likely logical class given the syndrome, this problem is the random-bond Ising model on the Nishimori line \cite{Nis81,DKLP02}, and the optimal threshold is believed to be the Nishimori point, estimated numerically as $0.10917(3)$ \cite{PPV09}. Minimum-weight matching, the standard efficient decoder, has a threshold near $0.1031$ in simulations \cite{WHP03}.
+
+Rigorous lower bounds are much smaller. Dennis, Kitaev, Landahl and Preskill \cite{DKLP02} showed that minimum-weight decoding, and hence optimal decoding, succeeds with probability tending to one for $p<0.0373$. For the toric code, a decoding failure produces a homologically nontrivial cycle on which at least half of the edges are errors, and the expected number of such cycles decays for these $p$. The value $0.0373$ uses a numerical estimate of the connective constant $\mu$ of self-avoiding walks on the square lattice; with the proven bound $\mu\le2.662343$ \cite{Cou22} the same argument gives $0.0366$.
+To our knowledge, no larger rigorous code-capacity threshold has been published for either decoder. Other rigorous bounds are lower: a recent method for general local noise channels gives $3.4\%$ for the surface code with bit flips \cite{KM26}, and the bounds for low-density parity-check codes of \cite{DKP15} give about $2.9\%$ for the toric code (see also \cite{KP13}). With measurement errors at the same rate as qubit errors, numerical estimates place the threshold at $0.0293(2)$ for matching \cite{WHP03} and near $0.033$ for optimal decoding \cite{OAIM04}.
+
+On the side of statistical mechanics, Horiguchi and Morita extended the Peierls argument to the $\pm J$ model on the square lattice and showed that a ferromagnetic phase exists when the fraction of antiferromagnetic bonds is below $1-0.97394\approx0.026$ \cite{HM82}. Rigorous results on phase transitions along the Nishimori line in finite dimensions remain scarce \cite{OO26}; for continuous spins in three dimensions see \cite{GS22}. Numerically, the phase boundary of the square-lattice model is reentrant below the Nishimori point \cite{AH04,PPV09}, so the matching threshold lies below the optimal one. Reentrance has been proved, with computer assistance, for a decorated square lattice with independent $\pm J$ couplings \cite{Pei26}.
+
+Thresholds proved for renormalization-group and cellular-automaton decoders are many orders of magnitude smaller \cite{BH11,KuP19}. Under circuit-level noise, the path argument gives $1.7\times10^{-4}$ for the circuit model of \cite{DKLP02}, matching thresholds of $7.4\times10^{-4}$ \cite{Fow12} and $2\times10^{-3}$ \cite{Tom26} have been proved, each for its own circuit and noise model, and the union-find and greedy decoders are known to have finite thresholds \cite{YLY26}.
+
+Critical points have been certified statistically in percolation. The method of Balister, Bollob\'as and Walters \cite{BBW05} turns Monte Carlo estimates into confidence intervals with exactly computed error probabilities, and it gives intervals of width at most $5\times10^{-4}$ at confidence $99.9999\%$ for the site and bond percolation thresholds of the eleven Archimedean lattices \cite{RW07}. We are not aware of a comparable certificate for an error-correction threshold.
+
+In this paper we give a statistical certificate, with confidence $1-2\times10^{-9}$ under the conditions of Theorem~\ref{thm:ml}, of a bound that gives the threshold $0.100$ for optimal decoding, and we prove the threshold $0.0465$ for both decoders without sampling.
+
+\subsection{Results}
+We obtain four results. Section~\ref{sec:setting} states them with all constants.
+
+\emph{Optimal decoding at $p=0.100$} (Theorem~\ref{thm:ml}). For every $p\le0.100$, maximum-likelihood decoding of the planar code fails with a probability that decays exponentially in the distance, for widths at most polynomial in the distance, with explicit constants. This is a statistical theorem, which holds with confidence $1-2\times10^{-9}$ under the binomial model (Bin) of the counts and the two tested properties (V6) and (Hcov) of the program (Section~\ref{sec:conf}). The bound is only useful for very large codes: it falls below $0.1$ at distance about $2.8\times10^{5}$.
+
+\emph{Sampling-free bounds} (Theorems~\ref{thm:planar}--\ref{thm:toric}). Every minimum-weight decoder with uniform weights, whatever its rule for breaking ties, and hence maximum-likelihood decoding, has threshold at least $0.0465$ for the planar and the rotated surface code and at least $0.046$ for the toric code.
+
+\emph{Measurement errors} (Theorem~\ref{thm:phenom}). Under phenomenological noise, in which data qubits and syndrome bits fail independently with probability $p$, minimum-weight decoding of the planar code has threshold at least $0.016$. The argument of \cite{DKLP02} gives $0.0114$ for this model, with a numerical connective constant of self-avoiding walks on the cubic lattice, and $0.0112$ with the proven bound $\mu_3<4.739$ \cite{PT00}.
+
+\emph{A single-scale criterion} (Theorem~\ref{thm:single}). Optimal decoding has threshold at least $p$ if one combination of two quantities of a single finite window is below an explicit constant at $p$. One quantity needs exact samples from the window posterior; the other needs only planar partition functions. We have not certified the criterion at any $p$.
+
+\subsection{Methods}
+The argument of \cite{DKLP02}, our counting bounds and every argument that counts paths, clusters or witnesses with a union bound share one feature: they bound the failure probability by the probability of an increasing event that contains every error set on which the decoder fails. For matching, Monte Carlo estimates suggest that no such argument reaches $p=0.093$ (Section~\ref{sec:discussion}). The certificate behind Theorem~\ref{thm:ml} does not bound an increasing event.
+
+For Theorem~\ref{thm:ml} we bound optimal decoding by an auxiliary local decoder. It divides the code into blocks of side $L=280$. For each block it computes a minimum-weight correction on a window around the block, with edge weights given by the exact marginals of the window posterior, and keeps the part inside the block. A block is bad if the result leaves a defect in it or a long residual path near it. A deterministic lemma (Section~\ref{sec:cert}) shows that a failure of the decoder forces a sparse hierarchy of bad blocks, which gives an explicit bound on the failure probability once every block type is bad with probability at most $5\times10^{-4}$. A bad block is determined by the errors within distance $2L$ of the block, so its probability is a single number per block type, and Monte Carlo sampling bounds it with an exact binomial confidence bound, in the manner of the percolation certificates mentioned above. We registered the run, including its acceptance rule, before it started. Optimal decoding does at least as well as the auxiliary decoder, and its failure probability is monotone in $p$ and in the size of the code (Section~\ref{sec:reduction}); this turns the bound at $p=0.100$ for codes made of whole blocks into Theorem~\ref{thm:ml}.
+
+For the sampling-free bounds (Section~\ref{sec:count}) we fix a failing minimum-weight correction $C^\ast$ that minimizes a linear tie-break functional. Its symmetric difference with the error contains a path between the rough boundaries whose edges are labelled as errors or corrections. Exchanging a short stretch of the path for a geodesic, or for a matching of its endpoints, gives another valid correction; since $C^\ast$ has least weight and, among failing minimizers, least functional, many labelled stretches cannot occur. The remaining labelled walks are counted by a transfer matrix with finite memory, and an integer potential that satisfies every row of the matrix certifies that their growth rate is below one. Section~\ref{sec:phenom} applies the same scheme to the three-dimensional decoding graph of phenomenological noise.
+
+All theorems of Section~\ref{sec:setting} are proved in Lean~4 \cite{dMU21} with Mathlib \cite{mathlib20} (Section~\ref{sec:lean}). The counting certificates are large finite checks; all of them are checked by the kernel, and also, in second proofs, with compiled evaluation, which trusts the compiler as well. Not formalized are the identification of the planar, toric and phenomenological codes with their decoding graphs, which is standard (for the rotated code Lean proves it), and, for Theorem~\ref{thm:ml}, the three conditions under which it holds: they enter the Lean proof as hypotheses. Some parts of the paper are proved on paper only: Theorem~\ref{thm:cert} in its general form, whose full proof is given in Supplement~S1, the sharper constants that follow it and those of Remark~\ref{rem:sharper}, the single-scale criterion of Section~\ref{sec:single}, and the deduction for measurement errors at $p=0.02$ mentioned in Section~\ref{sec:disc-meas}.
+
+\subsection{Organization}
+Section~\ref{sec:setting} defines the codes and decoders, states the main results and reduces Theorem~\ref{thm:ml} to a bound for the auxiliary decoder. Section~\ref{sec:cert} describes that decoder, the deterministic lemma and the certificate. Section~\ref{sec:count} proves the sampling-free bounds and Section~\ref{sec:phenom} the bound for measurement errors. Section~\ref{sec:single} proves the single-scale criterion. Section~\ref{sec:lean} describes the formal proofs, and Section~\ref{sec:discussion} discusses the limits of these methods.
+\section{Setting and main results}\label{sec:setting}
+
+\subsection{Decoding graphs}\label{sec:graphs}
+All results concern one error sector of a surface code under independent errors, so they are statements about a decoding graph. A \emph{decoding graph} $G$ has a set $V$ of checks, in some cases two boundary vertices $b_1,b_2$ that carry no parity constraint, and a finite set of edges, the error locations; an edge between a check and a boundary vertex is a \emph{half-edge}. Under independent noise of strength $p$, the error $E$ contains each edge independently with probability $p$. The syndrome $\partial E\subseteq V$ is the set of checks of odd degree in $E$. A \emph{correction} is a set $C$ of edges with $\partial C=\partial E$. If $G$ has boundary vertices, $C$ \emph{fails} when $|C\cap\delta(b_1)|$ and $|E\cap\delta(b_1)|$ have different parity, where $\delta(b_1)$ is the set of half-edges at $b_1$; in particular, $E\oplus C$ then contains a path from $b_1$ to $b_2$. For the toric code, $C$ fails when $E\oplus C$ is homologically nontrivial.
+
+We use the following graphs; the rotated code and the toric code are written in coordinates in Section~\ref{sec:count}.
+\begin{enumerate}[label=(\alph*),leftmargin=2em]
+\item The \emph{planar code} $\mathcal P_{d,w}$ of distance $d\ge2$ and width $w\ge1$: checks $(x,y)$ with $0\le x\le w-1$ and $0\le y\le d-2$, an edge between any two checks at Euclidean distance $1$, and a half-edge from each check $(x,0)$ to $b_1$ and from each check $(x,d-2)$ to $b_2$. The bottom and top sides are rough and the left and right sides smooth. For $w=d$ this is one error sector of the unrotated planar code of distance $d$; under independent $X$ and $Z$ errors the other sector is the same graph rotated by a right angle, so for square codes the statements below apply to it by symmetry.
+\item The \emph{rotated code} $\mathcal R_d$ of odd distance $d$: the checks are the $X$ checks of the rotated surface code with $d^2$ qubits, and the errors are $Z$ errors. Each qubit is an edge between the two $X$ checks that contain it; a qubit that lies in only one $X$ check is a half-edge to $b_1$ or to $b_2$, according to the rough side on which it lies.
+\item The \emph{toric code} $\mathcal T_m$ of side $m$: checks $\mathbb Z_m^2$, each joined to its right and upper neighbour.
+\item The \emph{phenomenological graph} $\mathcal Q_{d,w,T}$ of the planar code with $T\ge0$ noisy rounds of syndrome measurement and a final perfect round: vertices $(t,x,y)$ with $0\le t\le T$, $0\le x\le w-1$ and $0\le y\le d-2$, an edge between any two vertices at distance $1$ (space-like edges are data errors, time-like edges are errors of syndrome bits), and half-edges from $(t,x,0)$ to $b_1$ and from $(t,x,d-2)$ to $b_2$. Every edge has the same probability $p$, so data qubits and syndrome bits fail at the same rate.
+\end{enumerate}
+
+\subsection{Decoders}\label{sec:decoders}
+A \emph{decoder} maps each syndrome to a logical class, possibly at random; it fails on $E$ when it outputs a class other than that of $E$. The \emph{maximum-likelihood} (ML) decoder outputs a class of largest posterior probability given the syndrome; it minimizes the failure probability among all decoders, randomized ones included. We write $\PML(G,p)$ for its failure probability. A \emph{minimum-weight decoder} outputs a correction of least size $|C|$. Our counting bounds concern
+\[
+\PMW(G,p)=\Pr\bigl(\text{some correction of least size fails}\bigr),
+\]
+so they hold for every rule of breaking ties. Every minimum-weight decoder with a fixed tie rule is a decoder, so $\PML(G,p)\le\PMW(G,p)$. A decoder has threshold at least $p_\ast$ on a family of codes if its failure probability tends to zero as $d\to\infty$ for every $p<p_\ast$, along codes whose width $w$, and for the phenomenological graph also the number $T$ of rounds, are at most polynomial in $d$. All our bounds give exponential decay in $d$ for every $p\le p_\ast$ along such codes.
+
+\subsection{Results}\label{sec:results}
+For $0<p\le p_\ast<\tfrac12$ put
+\[
+\rho(p_\ast,p)=\sqrt{\frac{p(1-p)}{p_\ast(1-p_\ast)}}\ \le 1 .
+\]
+Theorem~\ref{thm:ml} is a statistical statement (Section~\ref{sec:conf}); every other result in this subsection is a theorem. Table~\ref{tab:results} lists the Lean theorems.
+
+\begin{theorem}[optimal decoding at $p=0.100$]\label{thm:ml}
+Let $L=280$ and $R=L-1=279$ be the block side and the window radius of the registered program. For $w\ge1$ and $d\ge 32L+1$ put $n_x=\max(5,\lceil w/L\rceil)$ and $n_y=\lfloor (d-1)/L\rfloor$. With confidence $1-2\times10^{-9}$, under the conditions \textup{(V6)}, \textup{(Hcov)} and \textup{(Bin)} of Section~\ref{sec:conf}, the following holds: for every $p\in[0,0.100]$, every $w\ge1$ and every $d\ge32L+1$,
+\begin{equation}\label{eq:ml}
+\PML(\mathcal P_{d,w},p)\le 422\,n_x\,e^{-0.2155\,(n_y-31)}+2\times10^{4}\,n_x\,e^{-0.02\,(n_y-31)} .
+\end{equation}
+In particular, under these conditions and with this confidence, the optimal threshold of the planar code under independent bit flips is at least $0.100$.
+\end{theorem}
+
+For $n_x=n_y=n$, as for $w=d-1=nL$, the right side of \eqref{eq:ml} is below $0.1$ from $n=986$ and below $10^{-3}$ from $n=1228$, that is, from distance $276{,}081$ and $343{,}841$. For square codes, $w=d$, we have $n_x=n_y+1$, and the two thresholds are $n_y=987$ and $n_y=1228$, that is, distance $276{,}361$ and $343{,}841$. Sharper constants are given in Remark~\ref{rem:sharper}.
+
+\begin{theorem}[planar code]\label{thm:planar}
+Let $0<p\le0.0465$, $d\ge11$ and $w\ge1$, and put $\lambda=0.998\,\rho(0.0465,p)$. Then
+\[
+\PML(\mathcal P_{d,w},p)\le\PMW(\mathcal P_{d,w},p)\le w\cdot398.91\cdot\frac{\lambda^{d-11}}{1-\lambda}.
+\]\end{theorem}
+
+\begin{theorem}[rotated code]\label{thm:rotated}
+Let $0<p\le0.0465$, let $d\ge11$ be odd, and put $\lambda=0.998\,\rho(0.0465,p)$. Then
+\[
+\PML(\mathcal R_d,p)\le\PMW(\mathcal R_d,p)\le 2d\cdot366{,}183{,}771.98\cdot\frac{\lambda^{d-11}}{1-\lambda}.
+\]
+\end{theorem}
+
+\begin{theorem}[toric code]\label{thm:toric}
+Let $0<p\le0.046$ and $m\ge1201$, and put $\lambda=0.997\,\rho(0.046,p)$. Then
+\[
+\PML(\mathcal T_m,p)\le\PMW(\mathcal T_m,p)\le m^2\cdot428{,}572{,}391.6\cdot\frac{\lambda^{m-10}}{1-\lambda}.
+\]
+For $0<p\le0.045$ and $m\ge769$ also $\PMW(\mathcal T_m,p)\le m^2\cdot383{,}157{,}811\cdot\lambda'^{\,m-8}/(1-\lambda')$ with $\lambda'=0.996\,\rho(0.045,p)$.
+\end{theorem}
+
+\begin{theorem}[measurement errors]\label{thm:phenom}
+Let $0<p\le0.016$, $d\ge9$, $w\ge1$ and $T\ge0$, and put $\lambda=0.998\,\rho(0.016,p)$. Then
+\[
+\PML(\mathcal Q_{d,w,T},p)\le\PMW(\mathcal Q_{d,w,T},p)\le (T+1)\,w\cdot1.2827\cdot\frac{\lambda^{d-9}}{1-\lambda}.
+\]\end{theorem}
+
+In each of Theorems~\ref{thm:planar}--\ref{thm:phenom}, $\lambda<1$ for every $p$ in the stated range, so the failure probability decays exponentially in the distance; in Theorem~\ref{thm:phenom} the bound grows linearly in the number $T+1$ of rounds, so the failure probability per round decays exponentially in $d$. The thresholds of minimum-weight decoding and of ML decoding are therefore at least $0.0465$ for the planar and the rotated code, at least $0.046$ for the toric code, and at least $0.016$ for the planar code under phenomenological noise.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+result & bound & Lean theorems & checked by \\
+\midrule
+Thm.~\ref{thm:ml} & $0.100$, ML & \texttt{theoremB\_a12\_main}, \texttt{threshold\_a12\_main}, & kernel \\
+ & & \texttt{theoremB\_certified\_familywise}, \texttt{obs\_accept}, \texttt{obs\_cp} & \\
+Thm.~\ref{thm:planar} & $0.0465$ & \texttt{planar\_A10\_kernel}, \texttt{planar\_A10\_kernel\_ML} & kernel \\
+ & & \texttt{planar\_A}, \texttt{planar\_A\_ML} (same statement) & compiled evaluation \\
+Thm.~\ref{thm:rotated} & $0.0465$ & \texttt{rotated\_B\_kernel}, \texttt{rotated\_B\_kernel\_ML} & kernel \\
+ & & \texttt{rotated\_B}, \texttt{rotated\_B\_ML} (same statement) & compiled evaluation \\
+Thm.~\ref{thm:toric} & $0.046$ & \texttt{toric\_A'\_10\_kernel}, \texttt{toric\_A'\_10\_kernel\_ML} & kernel \\
+ & & \texttt{toric\_A'\_10}, \texttt{toric\_A'\_10\_ML} (same statement) & compiled evaluation \\
+ & $0.045$ & \texttt{toric\_A'\_kernel}, \texttt{toric\_A'\_kernel\_ML} & kernel \\
+ & & \texttt{toric\_A'}, \texttt{toric\_A'\_ML} (same statement) & compiled evaluation \\
+Thm.~\ref{thm:phenom} & $0.016$ & \texttt{phenom\_D2M8\_kernel}, \texttt{phenom\_D2M8\_kernel\_ML} & kernel \\
+ & & \texttt{phenom\_D2}, \texttt{phenom\_D2\_ML} (same statement) & compiled evaluation \\
+Thm.~\ref{thm:single} & criterion & none & \\
+\bottomrule
+\end{tabular}
+\caption{The main results and their formal proofs. ``Kernel'' means that every step, including every finite computation, is checked by Lean's kernel; ``compiled evaluation'' means that the certificate checks are run as compiled code inside Lean (Section~\ref{sec:lean}).}
+\label{tab:results}
+\end{table}
+
+\subsection{What the confidence statement means}\label{sec:conf}
+Theorem~\ref{thm:ml} rests on a fixed program, the first stage of the auxiliary decoder of Section~\ref{sec:cert}, and on a random experiment that was registered before it ran. The bound \eqref{eq:ml} is a deterministic statement $S$. The Lean proof derives $S$ from (V6), (Hcov) and the hypothesis that five unknown numbers $\varepsilon_t$ are at most $5\times10^{-4}$, where $\varepsilon_t$ is the probability that a reference block of type $t\in\{\mathrm{bulk},L0,L1,R0,R1\}$ is bad under independent bit flips at $p=0.100$ (Section~\ref{sec:cert}). The experiment draws $n=1.2\times10^{5}$ independent samples of each type and accepts if, for every type, at most $18$ of them are bad.
+
+\begin{definition}\label{def:conf}
+A statement $S$ holds \emph{with confidence $1-\delta$} for a registered experiment if the experiment accepted and
+$\Pr(\text{the experiment accepts and } S \text{ is false})\le\delta$,
+where the probability is over the randomness of the experiment.
+\end{definition}
+
+The conditions are the following.
+\begin{enumerate}[label=(\textup{\arabic*}),leftmargin=2em]
+\item[(V6)] The first stage of the decoder reads only the syndrome: for every code size and every block, its output on the block depends on the error only through the syndrome in the window of the block.
+\item[(Hcov)] The first stage commutes with translations: if a code is embedded in a larger one at an offset by whole blocks, with the sides that a block touches aligned, then the larger code's output on the image of a block is the image of the smaller code's output on the block, for every syndrome.
+\item[(Bin)] For each type $t$, the number of bad samples of type $t$ has the binomial law with parameters $n$ and $\varepsilon_t$.
+\end{enumerate}
+Conditions (V6) and (Hcov) are properties of the registered program. They were tested by the validations V2, V4 and V6 of Section~\ref{sec:cert-val}, at the registered radius $R=L-1$ during the run and before the final analysis, with no mismatch. Validations are finite tests, so (V6) and (Hcov) remain validated hypotheses about the registered program, not proved facts. Condition (Bin) treats the pseudo-random numbers as independent uniform draws. The rounding of the flip probability is handled on paper, outside the formal proof: the sampler compares a uniform number in binary arithmetic with $0.1$, so its flip probability exceeds $0.1$ by less than $8.9\times10^{-17}$, and since a sample uses fewer than $3.92\times10^{6}$ edges, each $\varepsilon_t$ changes by less than $3.5\times10^{-10}$. This is far inside the margin of the acceptance rule: a type passes with probability at most $2\times10^{-10}$ whenever its bad probability is at least $4.99708\times10^{-4}$, so if some $\varepsilon_t>5\times10^{-4}$, the probability that this type passes, and hence that the experiment accepts, is still at most $2\times10^{-10}$. Condition (Bin) also identifies the blocks sampled by the experiment, each in a patch of the code that contains all edges its bad event depends on, with the reference blocks (Section~\ref{sec:cert-exp}). Only the marginal law of each count enters.
+
+The run accepted, with $6$, $3$, $8$, $9$ and $6$ bad samples of the types bulk, $L0$, $L1$, $R0$ and $R1$ (Section~\ref{sec:cert}). Under (V6), (Hcov) and (Bin), if some $\varepsilon_t>5\times10^{-4}$ then the probability of acceptance is at most $10^{-9}$, and otherwise $S$ holds (Lean: \texttt{theoremB\_certified}). During the run, as prescribed by a rule for an interim look that was fixed before the look, a second experiment with blocks of side $304$ and fresh seeds was registered, to be run only if the first had not passed all five types when its machines became free; it was not run (Section~\ref{sec:cert-interim}). For any rule that reports the bound of an accepting experiment, the probability of reporting a false bound is at most $10^{-9}+10^{-9}$ (Lean: \texttt{theoremB\_certified\_familywise}), which is the confidence $1-2\times10^{-9}$ of Theorem~\ref{thm:ml}; here Definition~\ref{def:conf} is applied to the combined registered procedure, both registrations together with the reporting rule.
+
+\begin{remark}[sharper constants]\label{rem:sharper}
+The five exact one-sided Clopper--Pearson upper bounds at level $2\times10^{-10}$ are at most $3.64642\times10^{-4}$ (rounded up; the largest is that of type $R0$), so they are below $\hat\varepsilon=3.6465\times10^{-4}$. By the Bonferroni inequality, all five true probabilities lie below their bounds with probability at least $1-10^{-9}$ for each registered experiment. Evaluating the bound of Section~\ref{sec:cert} at $\hat\varepsilon$ in place of $5\times10^{-4}$, with the level parameter $a_1=12$ that minimizes the bound there, as the registration prescribes, gives
+\[
+\PML(\mathcal P_{d,w},p)\le 4.60\times10^{2}\,n_x\,e^{-0.2556\,(n_y-31)}+2.71\times10^{4}\,n_x\,e^{-0.0541\,(n_y-31)}
+\]
+under the same conditions and with the same confidence $1-2\times10^{-9}$; for $n_x=n_y=n$, and also for square codes with $n_y=n$, it is below $0.1$ from $n=372$ and below $10^{-3}$ from $n=461$. The Lean proof does not cover this bound, since it checks Theorem~\ref{thm:cert} only in the instance described after that theorem, which has the level $5\times10^{-4}$ and a cruder count of witnesses in the second term.
+\end{remark}
+
+\subsection{From the auxiliary decoder to optimal decoding}\label{sec:reduction}
+In Section~\ref{sec:cert} we bound the failure probability of an auxiliary decoder at $p=0.100$ on codes made of whole blocks, $\mathcal P_{n_yL+1,\,n_xL}$ with $n_x\ge5$ and $n_y\ge32$, by the right side of \eqref{eq:ml}, under the same conditions and with the same confidence. The first stage of this decoder is the registered program; its later stages are minimum-weight corrections with edge weights in $[0.98,1.02]$. The Lean proof of Theorem~\ref{thm:ml} may take unit weights there, because only $\PML$ is bounded, the experiment measures only the first stage, and every such auxiliary decoder bounds $\PML$. Theorem~\ref{thm:ml} follows from this bound, the optimality of ML decoding and the next two lemmas, which hold for every code size.
+
+\begin{lemma}[monotonicity in $p$]\label{lem:monoq}
+For $0\le p\le p'\le\tfrac12$, $\PML(\mathcal P_{d,w},p)\le\PML(\mathcal P_{d,w},p')$.
+\end{lemma}
+
+\begin{proof}
+If $p=\tfrac12$ there is nothing to prove. Otherwise let $N$ contain each edge independently with probability $r=(p'-p)/(1-2p)\in[0,\tfrac12]$, independently of $E$. Then $E'=E\oplus N$ contains each edge independently with probability $p(1-r)+(1-p)r=p'$. Consider the randomized decoder that, given $\partial E$, draws $N$, applies the ML decoder for $p'$ to the syndrome $\partial E\oplus\partial N=\partial E'$, and adds the class of $N$ to its output. Since the class of $E'$ is the class of $E$ plus the class of $N$, this decoder fails exactly when the ML decoder for $p'$ fails on $E'$. Its failure probability is therefore $\PML(\mathcal P_{d,w},p')$, and the ML decoder for $p$ does at least as well.
+\end{proof}
+
+\begin{proposition}[monotonicity in the size]\label{prop:monosize}
+For fixed $p\in[0,1]$, $\PML(\mathcal P_{d,w},p)$ is non-increasing in $d$ and non-decreasing in $w$.
+\end{proposition}
+
+\begin{proof}
+From $d$ to $d+1$: the checks of $\mathcal P_{d,w}$ are the checks of $\mathcal P_{d+1,w}$ in rows $0,\dots,d-2$. Read the vertical edges of $\mathcal P_{d+1,w}$ between rows $d-2$ and $d-1$ as the half-edges of $\mathcal P_{d,w}$ at its top side. The restriction of an error of $\mathcal P_{d+1,w}$ to these edges and to the edges below them is an independent error of $\mathcal P_{d,w}$, with the same class, since the class is the parity at $b_1$, and its syndrome is the syndrome of the large code in rows $0,\dots,d-2$. Any decoder of $\mathcal P_{d,w}$ therefore gives a decoder of $\mathcal P_{d+1,w}$ with the same failure probability, and ML decoding of $\mathcal P_{d+1,w}$ does at least as well.
+
+From $w$ to $w+1$: a decoder of $\mathcal P_{d,w}$ draws an independent error $N$ on the edges of $\mathcal P_{d,w+1}$ that are not edges of $\mathcal P_{d,w}$, that is, the vertical edges and half-edges of column $w$ and the horizontal edges between columns $w-1$ and $w$. From $\partial E$ and $N$ it computes the syndrome of $E\cup N$ in $\mathcal P_{d,w+1}$, applies ML decoding of $\mathcal P_{d,w+1}$ and adds the class of $N$, the parity of its half-edges at $b_1$. It fails exactly when ML decoding of $\mathcal P_{d,w+1}$ fails on $E\cup N$, an independent error of $\mathcal P_{d,w+1}$. Hence $\PML(\mathcal P_{d,w},p)\le\PML(\mathcal P_{d,w+1},p)$.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{thm:ml}]
+Let $0\le p\le0.100$, $w\ge1$ and $d\ge32L+1$, and let $n_x,n_y$ be as in the theorem, so that $n_x\ge5$, $n_y\ge32$, $w\le n_xL$ and $d\ge n_yL+1$. Lemma~\ref{lem:monoq} and Proposition~\ref{prop:monosize} give
+\[
+\PML(\mathcal P_{d,w},p)\le\PML(\mathcal P_{d,w},0.100)\le\PML(\mathcal P_{n_yL+1,\,n_xL},0.100).
+\]
+The last probability is at most the failure probability of the auxiliary decoder on $\mathcal P_{n_yL+1,\,n_xL}$ at $p=0.100$, and by Section~\ref{sec:cert} this is at most the right side of \eqref{eq:ml}.
+\end{proof}
+
+\section{The certified threshold}\label{sec:cert}
+
+This section proves the bound on the auxiliary decoder that Section~\ref{sec:reduction} uses, and it reports the experiment behind Theorem~\ref{thm:ml}. Sections~\ref{sec:cert-decoder}--\ref{sec:cert-lemma} define the decoder, compute the input of its first stage exactly, and derive a failure bound from per-block probabilities (Theorem~\ref{thm:cert}). Sections~\ref{sec:cert-exp}--\ref{sec:cert-run} describe the registered experiment that bounds these probabilities: the registration, the validations of the program, the interim look with the conditional second registration, the run and the analysis. The confidence statement and its conditions (V6), (Hcov) and (Bin) are those of Section~\ref{sec:conf}.
+
+\subsection{Blocks, windows and the auxiliary decoder}\label{sec:cert-decoder}
+Fix a block side $L\ge2$ and a window radius $0\le R<L$. We work on codes made of whole blocks, $\mathcal P_{n_yL+1,\,n_xL}$ with $n_x\ge5$ and $n_y\ge4$: the checks are $(x,y)$ with $0\le x<W=n_xL$ and $0\le y<H=n_yL$, the bottom and top sides are rough and the left and right sides smooth. Block $c=(a,b)$, with $0\le a<n_x$ and $0\le b<n_y$, is the set of checks $[aL,aL+L)\times[bL,bL+L)$. An edge between two checks is \emph{owned} by the block of its left or lower endpoint, and a half-edge by the block of its check. Distances between blocks are $\ell_\infty$ distances of their indices, and $N_1(c)$ is the set of blocks at distance at most $1$ from $c$. The \emph{window} $W_c$ is the set of checks at $\ell_\infty$ distance at most $R$ from $c$. The \emph{window graph} $G_c$ has every edge with at least one endpoint in $W_c$; an edge with exactly one endpoint in $W_c$ (a \emph{cut edge}) and every half-edge end at a boundary vertex, so nothing outside the window constrains it.
+
+\paragraph{Weights.} Let $u$ be a fixed table of independent uniform numbers in $[-1,1]$, indexed by a position modulo $L$ and a direction, generated from a seed fixed in the registration. The edge $e$ with left or lower endpoint $(x,y)$ and direction $\delta$ gets $u_e=u_\delta(x\bmod L,\,y\bmod L)$ and the weight $w_e=1+0.02\,u_e\in[0.98,1.02]$; half-edges are indexed in the same way. Since $u_e$ depends on the position only modulo $L$, translates of a window by whole blocks carry identical weights.
+
+\paragraph{Stage 1.} For each block $c$, the first stage computes from the syndrome in $W_c$ alone a correction $X_c$ of $\cD\cap W_c$ on $G_c$ (Section~\ref{sec:cert-marg}) and keeps the edges of $X_c$ owned by $c$. The union of the kept edges is $C_0$. Its \emph{residual} is $\cD'=\cD\oplus\partial C_0$, and block $c$ is \emph{flagged} if $\cD'$ meets it. Stage~1 is the registered program, and it is the only part of the decoder that the experiment measures.
+
+\paragraph{Levels 0 and 1.} Fix integers $a_0,a_1\ge1$. Let $K$ range over the components of the flagged blocks under adjacency at distance at most $a_0$, and let $R_0(K)$ be the set of blocks within distance $\lceil a_0/2\rceil$ of $K$. If $|\cD'\cap K|$ is even, or $R_0(K)$ contains a check of row $0$ or row $H-1$, or $R_0(K)$ is the whole code, then $K$ is \emph{resolved} by a minimum-weight correction $C_K$ of $\cD'\cap K$ that uses only edges inside $R_0(K)$ and half-edges of its checks. Otherwise $K$ is \emph{odd}, and its blocks pass to level~1, which applies the same rule to them with adjacency $a_1$ and regions within distance $\lceil a_1/2\rceil$.
+
+\paragraph{Top.} Let $\Omega$ be the residual $\cD'$ restricted to the blocks of the unresolved level-1 components. $C_{\mathrm{top}}$ is a minimum-weight edge set of the whole code whose odd checks are exactly $\Omega$ (the boundary vertices absorb any parity). The output is $C=C_0\oplus\bigoplus_KC_K\oplus C_{\mathrm{top}}$.
+
+\begin{proposition}\label{prop:cert-valid}
+For every syndrome, $C$ is a correction, that is, $\partial C=\cD$ (Lean: \texttt{S3dec\_valid}).
+\end{proposition}
+
+\begin{proof}
+Blocks at distance at most $a$ have $\lceil a/2\rceil$-neighbourhoods that share a block, so the region of a component is a connected set of checks. A resolved component has even residual parity or reaches a rough row, so $C_K$ exists. Each flagged block lies in exactly one component at each level until it is resolved or reaches the top, so the odd checks of $\bigoplus_K C_K\oplus C_{\mathrm{top}}$ are exactly $\cD'$, and $\partial C=\partial C_0\oplus\cD'=\cD$.
+\end{proof}
+
+The registered program uses $a_0=4$ and $a_1=20$. The analysis below holds for every admissible $a_1$ at once, because the bad events are events of the first stage, which does not depend on $a_1$; the statement of Theorem~\ref{thm:ml} uses $a_1=12$. In the later stages only the bounds $0.98\le w_e\le1.02$ matter, so the Lean proof may take $w_e=1$, for the reason given in Section~\ref{sec:reduction}.
+
+\subsection{The first stage: exact window marginals}\label{sec:cert-marg}
+Stage~1 at block $c$ weights each edge of $G_c$ by the log-odds of its posterior probability given the syndrome in the window, and then matches. It has five steps. Write $\cD_c=\cD\cap W_c$.
+
+\begin{enumerate}[label=(\roman*),leftmargin=2em]
+\item \emph{Reference chain.} A fixed function of $\cD_c$ gives an edge set $c_0$ of $G_c$ with $\partial c_0=\cD_c$ on $W_c$: each defect is joined by a straight path to the nearest side of the window rectangle along which every check has a cut edge (ties are broken in a fixed order of the sides); if no side has this property, L-shaped paths are used, and in a window without any cut edge the defects are paired in lexicographic order.
+\item \emph{Window posterior.} Identify all boundary vertices of $G_c$ with one vertex $o$, and merge the $m$ edges from each check of the window's perimeter to $o$ (cut edges and half-edges; $m\in\{1,2\}$ in the windows that the analysis uses) into one edge that flips with probability $p_m=\tfrac12(1-(1-2p)^m)$. Under independent flips, the posterior law of the error $X$ on this graph given $\cD_c$ is
+\[
+\Pi(X)\propto\prod_e p_e^{X_e}(1-p_e)^{1-X_e}\qquad\text{over }X\text{ with }\partial X=\cD_c\text{ on }W_c,
+\]
+with $p_e=p$ for an ordinary edge and $p_e=p_m$ for a merged edge. Let $P_e=\Pi(e\in X)$; for an edge of a merged pair, $P_e=\tfrac12P_b+(1-P_b)\,y^2/(1+y^2)$ with $y=p/(1-p)$ and $P_b$ the marginal of the merged edge.
+\item \emph{Weights.} Each edge of $G_c$ gets
+\begin{equation}\label{eq:cert-weights}
+w'_e=\min\Bigl(30,\max\Bigl(-30,\ \ln\frac{1-P_e}{P_e}\Bigr)\Bigr)+10^{-3}\,u_e .
+\end{equation}
+\item \emph{Matching.} $X_c$ is a minimum-weight correction of $\cD_c$ on $G_c$ for the weights $w'$. Negative weights are allowed and handled by the standard reduction. It is computed by the sparse-blossom implementation of minimum-weight perfect matching~\cite{Hig22,HG25} (based on~\cite{Edm65}), at a version fixed in the registration, on a canonical ordering of the checks and edges of the window; the term $10^{-3}u_e$ separates ties, and the remaining tie behaviour is part of the fixed program.
+\item \emph{Commit.} The edges of $X_c$ owned by $c$ are kept.
+\end{enumerate}
+The construction is designed for (V6) and (Hcov). The reference chain, the weights and the matching are computed from $\cD_c$ alone, so the output on $c$ should depend on the error only through the syndrome in $W_c$; the canonical choice of $c_0$ is what makes this hold bit for bit, since the posterior itself does not depend on $c_0$ but its floating-point evaluation does. The computation depends on the window only through its shape and the periodic weights $u_e$, which is what (Hcov) needs.
+
+\paragraph{The marginals as an Ising model on the dual.} Write $X=c_0\oplus Z$. The set $Z$ ranges over the edge sets with even degree at every check of $W_c$, that is, over the cycles of the planar graph $G_c^{\circ}$ obtained above, and $\Pi(Z)\propto\prod_{e\in Z}y_e$ with $y_e=p_e/(1-p_e)$ for $e\notin c_0$ and $y_e=(1-p_e)/p_e$ for $e\in c_0$. In the plane, the cycles of $G_c^{\circ}$ are exactly the domain walls of the configurations $\pm\sigma$ of spins on its faces. Hence $\Pi$ is the law of the domain walls of the Ising model on the dual graph of $G_c^{\circ}$ with couplings $K_e=-\tfrac12\ln y_e$, that is, with
+\[
+t_e=\tanh K_e=\pm(1-2p_e),
+\]
+with the minus sign on the edges of $c_0$: a random-bond Ising model on the Nishimori line~\cite{Nis81}, with bond signs given by $c_0$. By the Kac--Ward formula~\cite{KW52} (equivalently, the Pfaffian method of~\cite{Kas61,Fis61}), its partition function is a constant times $S=\det(I-\Lambda)^{1/2}$, where $\Lambda$ acts on the directed edges of the dual graph, $\Lambda_{\vec e,\vec e'}=t_{e'}\,e^{i\theta(\vec e,\vec e')/2}$ when $\vec e'$ continues $\vec e$ without backtracking, $\theta$ being the turning angle, and $\Lambda_{\vec e,\vec e'}=0$ otherwise. Differentiating,
+\begin{equation}\label{eq:cert-kw}
+\langle\sigma\sigma'\rangle_e=t_e+(1-t_e^2)\,\frac{\partial\ln S}{\partial t_e},\qquad
+\frac{\partial\ln S}{\partial t_e}=-\tfrac12\operatorname{tr}\Bigl((I-\Lambda)^{-1}\frac{\partial\Lambda}{\partial t_e}\Bigr),
+\end{equation}
+where $\sigma,\sigma'$ are the spins on the two faces at $e$. Then $\Pi(e\in Z)=\tfrac12(1-\langle\sigma\sigma'\rangle_e)$, and $P_e=\Pi(e\in Z)$ for $e\notin c_0$, $P_e=1-\Pi(e\in Z)$ for $e\in c_0$. The marginals therefore need exactly the entries of $(I-\Lambda)^{-1}$ at the nonzero positions of $\Lambda$.
+
+\paragraph{Computation.} A diagonal unitary similarity, which multiplies the row and the column of each directed edge by a phase determined by its direction, makes $\Lambda$ real with entries $\pm t_{e'}$; it leaves $S$ and the right side of \eqref{eq:cert-kw} unchanged, so all arithmetic is real, in double precision. The matrix $I-\Lambda$ is sparse, with the adjacency of the faces of the window. We order its unknowns by nested dissection~\cite{Geo73}, splitting the rectangle of faces recursively along a line of edges in the middle of its longer side down to pieces of at most $16$ faces, factor it by a multifrontal LU decomposition with dense frontal matrices, and obtain the needed entries of the inverse by the backward recursion of selected inversion~\cite{LLYCE09,LYMLYE11}. For a window with $N$ edges this takes $O(N^{3/2})$ operations and $O(N\log N)$ memory. Validation V5 compares the marginals with an exact transfer-matrix computation.
+
+The bound of Theorem~\ref{thm:cert} does not use that the marginals are accurate or that the matching is optimal. It uses only that stage~1 is a fixed program with (V6) and (Hcov). Their accuracy affects only how often blocks are bad, which the experiment measures.
+
+\subsection{Block events and the deterministic analysis}\label{sec:cert-lemma}
+Let $F=E\oplus C_0$; its odd checks are $\cD'$.
+
+\begin{definition}\label{def:cert-bad}
+Block $c$ is \emph{bad} if it is flagged, or if some path of $F$ inside $N_1(c)$ joins a check of $c$ to a check at $\ell_\infty$ distance at least $L$ from $c$ (the block is \emph{long}).
+\end{definition}
+
+By (V6), whether $c$ is bad depends only on the error on the edges with an endpoint in the union of the windows of $N_1(c)$, and these edges lie within $\ell_\infty$ distance $L+R$ of $c$. For two blocks at distance $n$ these edge sets are disjoint when $(n-3)L>2R$. With
+\[
+D=4+\lfloor 2R/L\rfloor ,
+\]
+the bad events of any set of blocks with pairwise distances at least $D$ are therefore independent; for $R=L-1$, $D=5$.
+
+\paragraph{Types.} Since $R<L$, the windows of the blocks of $N_1(c)$ reach at most one block column beyond $N_1(c)$. In block rows $2,\dots,n_y-3$, a block in one of the columns $2,\dots,n_x-3$ is of type \emph{bulk}, and the blocks of columns $0$, $1$, $n_x-2$, $n_x-1$ are of the types $L0$, $L1$, $R1$, $R0$, whose windows are clipped by a smooth side. By (Hcov), all blocks of one type are bad with the same probability, that of the reference block of the type (Section~\ref{sec:cert-exp}). The rough rows $0$, $1$, $n_y-2$, $n_y-1$ are never sampled: the analysis declares their blocks bad.
+
+\paragraph{Hypothesis $(\mathrm H_\varepsilon)$.} For every set $S$ of blocks in rows $2,\dots,n_y-3$ with pairwise distances at least $D$, $\Pr(\text{all blocks of }S\text{ are bad})\le\varepsilon^{|S|}$. Under (V6) and (Hcov) this holds with $\varepsilon=\max_t\varepsilon_t$.
+
+\begin{theorem}[failure bound of the auxiliary decoder]\label{thm:cert}
+Let $L\ge2$, $0\le R<L$, $D=4+\lfloor 2R/L\rfloor$, $a_0\ge\max(2,D-1)$ and $a_1\ge\max(a_0,2D-2)$ with $a_1$ even, and put $H_0=2a_1+D+2$. Let stage~1 be any program whose output on each block depends only on the syndrome in the block's window, and let the later stages be as in Section~\ref{sec:cert-decoder}, with weights in $[0.98,1.02]$. Assume $(\mathrm H_\varepsilon)$ with $\varepsilon$ below the convergence limits of the series $V_1$ and $r$ in the proof. Then there are explicit constants $C_1,s_1,C_2,s_2>0$, which depend only on $\varepsilon$, $D$, $a_0$, $a_1$, the weight ratio $\kappa=1.05$ and $L$, and do not increase with $L$, such that for all $n_x\ge5$ and $n_y>H_0$
+\[
+\Pr\bigl(\text{the decoder fails on }\mathcal P_{n_yL+1,\,n_xL}\bigr)\le C_1\,n_x\,e^{-s_1(n_y-H_0)}+C_2\,n_x\,e^{-s_2(n_y-H_0)} .
+\]
+\end{theorem}
+
+Lean checks this theorem only in the instance $(\varepsilon,a_1,R)=(5\times10^{-4},12,L-1)$, with $a_0=4$, $D=5$ and $H_0=31$, for every $L\ge2$, as a step of the proof of \texttt{theoremB\_a12\_main} rather than as a separate theorem; there the bound holds with
+\[
+C_1=422,\quad s_1=0.2155,\quad C_2=2\times10^{4},\quad s_2=0.02,
+\]
+for all $n_x\ge5$ and $n_y\ge32$. The general form rests on the proof outlined below, written out in full in Supplement~S1, and so do the numerical evaluations of its series, which Lean does not check: at the same $(\varepsilon,a_1)$ they give the sharper second term $9.61\times10^{4}\,n_x\,e^{-0.0351(n_y-31)}$ with the same first term, and $C_2\le5.36\times10^{3}\le2\times10^{4}$ at $s_2=0.02$, consistent with the Lean constants; at the certified level $\hat\varepsilon$ they give the constants of Remark~\ref{rem:sharper}.
+
+\begin{proof}[Structure of the proof]
+\emph{Clusters.} Call the connected components of the bad blocks under adjacency at distance at most $a_0$ the \emph{clusters}; since $a_0\ge D-1$, distinct clusters are at least $D$ apart. The clusters that contain the declared rows are the bottom and top clusters; the others lie in rows $2+a_0,\dots,n_y-3-a_0$.
+
+\emph{(A) Components of $F$.} Every connected component of $F$ meets at most one cluster, and a component that meets no bad block has no odd check and lies within distance $L-1$ of each block it meets. Indeed, if $c$ is good, a path of $F$ from $c$ that reached distance $L$ would first reach distance exactly $L$ while still inside $N_1(c)$, because every edge changes each coordinate by at most $1$; then $c$ would be long. So a component leaving a cluster $K_1$ through a good neighbouring block $c'$ stays within distance $L-1$ of $c'$, and a second cluster met by it would lie within distance $2\le a_0$ of $K_1$.
+
+\emph{(B) Decomposition.} Level-0 components lie inside clusters. Group the clusters into \emph{families} linked by level-1 components. For a family $\mathcal F$, let $Y_{\mathcal F}$ be the sum of the components of $F$ meeting $\mathcal F$ and of the resolved corrections inside $\mathcal F$. Then $\partial Y_{\mathcal F}=\Omega\cap\mathcal F$, and $E\oplus C$ is the sum of the components of $F$ meeting no bad block, which are closed and shorter than $3L<H$ and so do not change the class, of the $Y_{\mathcal F}$, and of $C_{\mathrm{top}}$.
+
+\emph{(C) Failure paths.} If the decoder fails, then either (T1) some family has $Y_{\mathcal F}$ of odd degree at both boundary vertices, or (T2) there is a sequence $b_1\to\mathcal F_1\to\dots\to\mathcal F_m\to b_2$ of distinct families in which consecutive members are joined by paths of $C_{\mathrm{top}}$. This follows from the handshake lemma in the multigraph whose vertices are the families and $b_1,b_2$.
+
+\emph{(W) Parity witnesses.} An odd level-0 component of an interior cluster has another flagged block of its cluster at distance at least $a_0+1$; an odd level-1 component whose clusters are all interior has, in one of them, a flagged block of another level-1 component at distance at least $a_1+1$; and every check of $\Omega$ lies in an odd level-0 component of an odd level-1 component, so consecutive families of a (T2) path are more than $a_1$ apart. All three follow from the parity of the residual inside an interior cluster, whose components of $F$ reach no rough side.
+
+\emph{(X) Exchange.} On the part of a (T2) path between the last family that touches the bottom strip of $a_1/2+2$ rows and the first family after it that touches the top strip, the total weight of the paths of $C_{\mathrm{top}}$ is at most $\sum_id(u_i,v_i)+d(v_0,b_1)+d(u_{m+1},b_2)$, where $u_i,v_i$ are the entry and exit defects of the $i$-th family and $d$ is the graph distance; otherwise re-pairing would lower the weight of $C_{\mathrm{top}}$.
+
+\emph{Counting.} In each cluster, select blocks greedily in breadth-first order, keeping a block when it is at distance at least $D$ from all selected ones; selected blocks are pairwise at least $D$ apart, so by $(\mathrm H_\varepsilon)$ a set of them is bad with probability at most $\varepsilon$ to its size. With $A_0=D-1+a_0$, $A_1=D-1+a_1$ and $T_j=|\{v\in\mathbb Z^2:D\le|v|_\infty\le A_j\}|$, a route through a family has in-cluster steps with offsets counted by $U_0=\varepsilon T_0$ and level-1 links counted by
+\[
+V=\varepsilon T_1Q,\qquad Q=\varepsilon T_0+\frac{U_0}{1-U_0}.
+\]
+For (T1), a family touches both strips and climbs $n_y-H_0$ rows; tilting each step by $e^{sv_y}$, with $v_y$ its signed row displacement, gives the series $V_1(s)$, and the term converges for $V_1(0)<1$ with rate $s_1=\sup\{s:V_1(s)\le0.9,\ U_0(s)\le0.9\}$. For (T2), each intermediate family is bounded by a tree of selected blocks that includes a witness path from (W) of span at least $a_1+2-D$, counted exactly by convolution; an exponential tilt $\lambda$ turns (X) into a factor $e^{\lambda\kappa}$ per unit of route length and a landing sum $J(\lambda,s)=\sum_{|\Delta|_\infty\ge a_1+2-D}e^{-\lambda|\Delta|_1+s\Delta_y}$ per jump, with $s<\lambda$; the product of these factors per family is the ratio $r(\lambda,s)$, and the term converges when $r<1$. The ends of the path contribute at most $(h_s+1)\,n_x$ starting positions, $h_s=a_1/2+1$, and the boundary terms of (X), which add $c_{\mathrm{ends}}=D\nu(1+\kappa)+\kappa\nu+\kappa(2h_s+A_1)+2.04\,\kappa/L$ units of block norm with $\nu=2$. Summing the geometric series gives the two terms of the theorem with
+\[
+C_1=\frac{(h_s+1)\,W_1\,(1+\varepsilon T_1(s_1)W_1)}{1-V_1(s_1)},\qquad
+C_2=\frac{4(h_s+1)\,G_{\mathrm{bot}}\,J\,E_{\mathrm{top}}\,e^{\lambda c_{\mathrm{ends}}}}{1-r},
+\]
+where $W_1=1/(1-U_0(s_1))$, $G_{\mathrm{bot}}=W_0/(1-V)$ and $E_{\mathrm{top}}=\varepsilon W_0(1+\varepsilon T_1W_0)/(1-V)$ with $W_0=1/(1-U_0)$, all evaluated at the tilts of the respective terms, and $H_0=2h_s+A_1+1$. The weights enter only through $d(x,y)\le1.02\,|x-y|_1$ and the lower bound $0.98\,L(|\Delta|_1-2)$ on the weight of a path between blocks at displacement $\Delta$, whose ratio is at most $\kappa=1.05$.
+\end{proof}
+
+\subsection{The registered experiment}\label{sec:cert-exp}
+\paragraph{Reference blocks and the sampler.} In the code of $5\times5$ blocks, $\mathcal P_{5L+1,\,5L}$, the blocks $(a,2)$ with $a=0,1,2,3,4$ are the \emph{reference blocks} of the types $L0$, $L1$, bulk, $R1$, $R0$, and $\varepsilon_t$ is the probability that the reference block of type $t$ is bad at $p=0.100$. A sample of type $t$ draws independent flips on a \emph{patch}: the checks within $\ell_\infty$ distance $R+1$ of $N_1(c)$, clipped at the smooth side for the types $L0$, $L1$, $R1$, $R0$, with all edges between them. It then runs stage~1 on the nine windows of $N_1(c)$ and evaluates Definition~\ref{def:cert-bad}. Every edge that the bad event depends on lies in the patch, so a sample is bad with probability $\varepsilon_t$; this identification is part of (Bin), and validation V4 tests it against full codes.
+
+\paragraph{The registration.} The registration was frozen on 26 October 2026 at 01:07:49 UTC, before any certificate sample was drawn. It fixes:
+\begin{itemize}[leftmargin=2em]
+\item the program: $p=0.100$, $L=280$, $R=279$, the posterior weights \eqref{eq:cert-weights} on every edge of every window, the tie term $10^{-3}u_e$, the clipping at $\pm30$, the marginal computation of Section~\ref{sec:cert-marg} and the matching implementation at a fixed version; the later stages with $a_0=4$ and $a_1=20$, and the rule that the statement uses the admissible $a_1$ minimizing the bound at the certified level;
+\item the experiment: $n=1.2\times10^{5}$ samples of each of the five types, in $3000$ chunks of $40$ per type; chunk $j$ of type $t$ (types in the order bulk, $L0$, $L1$, $R0$, $R1$, $t=0,\dots,4$) uses the seed $s_0+10^{6}t+j$, where $s_0$ was drawn from the operating system's entropy source at the freeze and never used before; every chunk is run to completion and counted, with no stopping rule;
+\item the acceptance rule: accept if $k_t\le18$ for every type $t$, where $k_t$ is the number of bad samples of type $t$. This is equivalent to the exact one-sided Clopper--Pearson~\cite{CP34} upper bound for $\varepsilon_t$ at level $2\times10^{-10}=10^{-9}/5$ being at most $5\times10^{-4}$ for every type: the bound is below $4.99708\times10^{-4}$ at $k=18$ and above $5.1377\times10^{-4}$ at $k=19$;
+\item the platform: one processor model, the interpreter and numerical libraries by the SHA-256 of their binaries, and a single-threaded linear-algebra kernel fixed by name, with a record of the platform read back on each machine;
+\item the SHA-256 of every program file, of the validation outputs and of the final-geometry output of V1.
+\end{itemize}
+The registration file has the SHA-256 hash
+\begin{center}\small\texttt{c17b728978418411eaca506d928e6f17d77dcb09e5991290e0b9da1bb9417dc6},\end{center}
+and its hash list was submitted to OpenTimestamps calendar servers; the completed timestamp proof places it in Bitcoin block $973157$. The timestamp alone does not show that the registration preceded the first sample, because the run began at 01:15 UTC, before that block; this order rests on the run logs. The archived copy of the registration has details of the computing setup normalized (see Code and data); the file with the hash above is available from the author on request. The command of the final analysis was written down before the first chunk ran. The block side $L=280$ was chosen before the registration from pilot runs at smaller $L$ with separate seeds, as the smallest candidate whose estimated probability of a failed experiment was at most $0.07$.
+
+\subsection{Validations}\label{sec:cert-val}
+The validations test the registered program; each uses its own random inputs and none reads a certificate sample. Table~\ref{tab:cert-val} lists them. V2, V4 and V6 first ran before the run on blocks with window radius $R=3L/4$. Since the registered radius is $R=L-1$, they ran again at $R=L-1$ during the run, before the final analysis; the interim look of Section~\ref{sec:cert-interim} had read the counts of the run before these repetitions. Every comparison had no mismatch.
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{@{}p{0.07\textwidth}p{0.40\textwidth}p{0.45\textwidth}@{}}
+\toprule
+& what is compared & runs and outcome \\
+\midrule
+V1 & stage-1 output of the nine windows of $N_1(c)$, sample by sample, in two runs of the program & $60$ samples at $(L,R)=(16,12)$, identical in separate processes and on every machine before its first chunk; $12$ samples at $(280,279)$, identical on two machines of the fleet, before the run \\
+V2 & stage-1 outputs, in block coordinates, for errors that are periodic with period $L$ & $10$ trials at $(16,12)$ before the run; $10$ trials at each of $(8,7)$, $(16,15)$, $(24,23)$ during the run; no mismatch \\
+V3 & stage-1 events and window outputs against an independent implementation of the marginals and the matching & $30$ samples at $(8,6)$ before the run: no mismatch in $30$ events and $270$ window outputs \\
+V4 & block events of the sampler against the full decoder on planar codes of $6\times6$ blocks, all five types, and validity of the full correction & before the run: $0$ mismatches in $720$ and $240$ blocks at $(8,6)$ and $(12,9)$; during the run: $0$ in $720$, $960$ and $288$ blocks at $(8,7)$, $(16,15)$, $(24,23)$; every correction valid \\
+V5 & window marginals against an exact transfer-matrix computation & windows up to $17\times17$, $p\in\{0.095,0.10,0.103\}$, including a smooth side: largest difference $1.06\times10^{-13}$ \\
+V6 & stage-1 output on $E$, on $E\oplus S$ (plaquette boundaries inside the windows), on $E\oplus S\oplus\Gamma$ (a relative cycle across the windows) and on the canonical chain of the syndrome: outputs of all nine windows, matching weights and flags & before the run: $450$ decodes at $(16,12)$; during the run: $1500$, $1500$ and $600$ decodes at $(8,7)$, $(16,15)$, $(24,23)$; all five types; no mismatch \\
+\bottomrule
+\end{tabular}
+\caption{Validations of the registered program. Pairs $(L,R)$ give the block side and the window radius; $R=L-1$ is the registered geometry.}
+\label{tab:cert-val}
+\end{table}
+
+V6 tests (V6) directly: errors with the same syndrome must give bit-identical stage-1 outputs. V2 and V4 test (Hcov) and the identification of samples with reference blocks. V1 tests that the program is deterministic on the registered platform, including at the registered geometry, and V3 and V5 test the implementation.
+
+\subsection{The interim look and the conditional second registration}\label{sec:cert-interim}
+A rule for one interim look, which is not part of the registration, was fixed and written down at 01:50--01:51 UTC, after the run had started at 01:15 UTC and before any look at the data. It prescribed reading the counts of all chunks at about 04:00 UTC, complete or partial, and registering a second experiment if some $k_t$ was already above $18$, or if the posterior probability of acceptance under a frozen model of the per-type rates was below $0.90$.
+
+At the look (04:03 UTC) the counts were $6$ of $120000$ for bulk, whose samples were complete, $3$ of $70411$ for $L0$, $1$ of $8875$ for $L1$, and none yet for $R0$ and $R1$. The model gave a probability of acceptance of $0.458$, in which the two unsampled types entered only through the prior, with a factor $0.775$ each; so the rule required a second registration. It was frozen at 04:20 UTC with $L=304$, $R=303$, the same design ($n=1.2\times10^{5}$ per type, accept if every $k_t\le18$), seeds whose range is disjoint from those of the first registration, and the same program with a faster implementation of the marginals and of the setup whose outputs are bit-identical; its V1 at $(304,303)$ gave the same output on two machines and the same output as the original implementation. Its hash list is timestamped in Bitcoin block $973186$ (OpenTimestamps), and it carries the condition that it is run only if the first experiment has not passed all five types when its machines become free, and otherwise never. The first experiment passed, so the second was never run and none of its samples exists.
+
+The rule did not allow stopping or changing the running experiment, and the first experiment ran to its registered end, unchanged. By the union bound of Section~\ref{sec:conf}, the reported bound carries the overall confidence $1-2\times10^{-9}$ in both branches, including the branch in which the second experiment never runs, although that branch depends on the data of the first. The reported theorem carries the block side of the experiment that passed, $L=280$.
+
+\subsection{The run and the analysis}\label{sec:cert-run}
+The run used $19$ machines with the registered processor model, each with $192$ worker processes, on 26 October 2026. It started at 01:15 UTC, the last machine finished its chunks at 09:07 UTC, and the analysis ran at 09:13 UTC. Before its first chunk, each machine recorded its platform and checked it against the registration, checked the SHA-256 of every program file, repeated the V1 replay at $(16,12)$, which gave the registered output on all $19$ machines, and checked the registered record of the V1 runs at $(280,279)$. Chunks were resumable: a chunk interrupted by a preemption restarts from its seed and keeps its complete records, so it reproduces the same samples.
+
+The analysis ran the command written down before the run. It checked that all $15000$ chunks were complete, $600000$ records with the registered seeds, sample indices and parameters, regenerated the list of chunks from the registration and compared it with the list on each machine, and computed the counts and the exact Clopper--Pearson bounds. The list of the SHA-256 hashes of the output files and of the analysis output is timestamped in Bitcoin block $973223$ (OpenTimestamps). An independent re-analysis, written from the registration alone, gave the same counts. Table~\ref{tab:cert-counts} shows the result.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}lrrc@{}}
+\toprule
+type & $n$ & bad samples $k_t$ & upper bound for $\varepsilon_t$ \\
+\midrule
+bulk & $120000$ & $6$ & $3.142\times10^{-4}$ \\
+$L0$ & $120000$ & $3$ & $2.578\times10^{-4}$ \\
+$L1$ & $120000$ & $8$ & $3.483\times10^{-4}$ \\
+$R0$ & $120000$ & $9$ & $3.647\times10^{-4}$ \\
+$R1$ & $120000$ & $6$ & $3.142\times10^{-4}$ \\
+\bottomrule
+\end{tabular}
+\caption{The certificate at $p=0.100$, $L=280$, $R=279$. The last column is the exact one-sided Clopper--Pearson upper bound at level $2\times10^{-10}$, rounded up.}
+\label{tab:cert-counts}
+\end{table}
+
+Every $k_t$ is at most $18$, so the experiment accepted. The largest upper bound is that of $R0$, $3.64642\times10^{-4}$ rounded up, which gives the level $\hat\varepsilon$ of Remark~\ref{rem:sharper}. By Sections~\ref{sec:conf} and~\ref{sec:reduction}, the acceptance gives Theorem~\ref{thm:ml}. Lean checks that the counts satisfy the acceptance rule (\texttt{obs\_accept}), that each Clopper--Pearson bound is at most $5\times10^{-4}$ (\texttt{obs\_cp}), that the rounded values of Table~\ref{tab:cert-counts} are valid and correctly rounded upper bounds (\texttt{cp\_upper\_k} and \texttt{cp\_tight\_k} for $k=3,6,8,9$), and the two confidence statements (\texttt{theoremB\_certified}, \texttt{theoremB\_certified\_familywise}), as detailed in Section~\ref{sec:lean-ml}.
+
+
+\section{Sampling-free bounds}\label{sec:count}
+
+In this section we prove Theorems~\ref{thm:planar}, \ref{thm:rotated} and~\ref{thm:toric}. We fix a failing
+correction of least size that minimizes a tie-break potential, label the edges of a path in its symmetric
+difference with the error, and exclude the labelled stretches of the path that could be exchanged for a shorter or a
+more canonical alternative. The labelled paths that survive are counted by a transfer system with memory, and an
+integer potential, checked exactly, bounds their growth. Section~\ref{sec:phenom} applies the same scheme to
+measurement errors. Two features are specific to this section: the smooth sides of the rotated code, which are not
+parallel to the lattice axes, and the seam of the tie-break on the torus.
+
+\subsection{Coordinates}\label{cnt:coord}
+All three decoding graphs consist of points of $\mathbb Z^2$, or of $\mathbb Z_m^2$, joined by unit steps, together
+with half-edges. We write $|u-v|$ for the $\ell^1$ distance, and a lattice path between $u$ and $v$ with $|u-v|$
+steps is a \emph{geodesic}. Each half-edge is regarded as the unit step from its check to an \emph{outer point}, a
+lattice point outside the graph, as follows.
+
+\emph{Planar code.} For the check $(x',y')$ of $\mathcal P_{d,w}$ in Section~\ref{sec:graphs} we write
+$(x,y)=(y',x')$. The checks are then the points of the box $B=[0,d-2]\times[0,w-1]$, each check $(0,y)$ has a
+half-edge to $b_1$ with outer point $(-1,y)$, and each check $(d-2,y)$ has a half-edge to $b_2$ with outer point
+$(d-1,y)$. These are the coordinates of the Lean statements, which write $n_x=d-1$ and $n_y=w$.
+
+\emph{Rotated code.} The $d^2$ data qubits of $\mathcal R_d$ sit at the points $(a,b)$ with $0\le a,b\le d-1$. For
+$0\le i,j\le d-2$ the plaquette with corners $(i,j)$, $(i+1,j)$, $(i,j+1)$, $(i+1,j+1)$ carries an $X$ check when
+$i+j$ is even. The weight-two $X$ checks act on the qubits $(i,0),(i+1,0)$ for odd $i$ and on $(i,d-1),(i+1,d-1)$ for
+even $i$, $0\le i\le d-2$; we place them at the positions $(i,-1)$ and $(i,d-1)$. The $X$ check at position $(i,j)$
+gets the lattice coordinates $(x,y)=\bigl((i+j)/2,(i-j)/2\bigr)$, so that $x+y=i$ and $x-y=j$. Then:
+\begin{enumerate}[label=(\alph*),leftmargin=2em]
+\item the checks are exactly the lattice points of $R_d=\{(x,y)\in\mathbb Z^2: 0\le x+y\le d-2,\ -1\le x-y\le d-1\}$;
+\item two checks share a qubit if and only if they are lattice neighbours, and then they share exactly one;
+\item the qubits that lie in only one $X$ check are the half-edges. At each check $z$ they correspond one-to-one to the
+  unit steps $e$ for which $z+e$ lies beyond one of the \emph{rough lines} $x+y=-1$ and $x+y=d-1$ and inside the
+  \emph{smooth range} $-1\le x-y\le d-1$; the outer point of the half-edge is $z+e$. The half-edges across $x+y=-1$
+  are the qubits of the column $a=0$ and join $b_1$; those across $x+y=d-1$ are the qubits of the column $a=d-1$ and
+  join $b_2$. There are $d$ of each.
+\end{enumerate}
+These facts follow from the definitions. We also checked them by explicit construction for $d\le21$, and the Lean
+development identifies the failure probability of the rotated code with that of this graph
+(Section~\ref{sec:lean-count}). A check can have two half-edges to the same boundary vertex; they are different
+edges. We call the lines $x-y=-1$ and $x-y=d-1$ the bottom and the top \emph{smooth sides}, and
+$h(z)=(d-1)-(x-y)$ the \emph{height} of a point $z=(x,y)$ below the top side.
+
+\emph{Toric code.} We write the checks of $\mathcal T_m$ as $(x,y)$ with $x,y\in\{0,\dots,m-1\}$; each check is
+joined to $(x\pm1,y)$ and $(x,y\pm1)$, modulo $m$.
+
+\subsection{Tie-break, failure paths and exclusion rules}\label{cnt:rules}
+For the planar and the rotated code let $\phi(x,y)=x+9y$. For the toric code let $\phi(x,y)=x$, the representative in
+$\{0,\dots,m-1\}$; this is a function on $\mathbb Z_m^2$, which jumps across the \emph{seam} between the columns $m-1$
+and $0$. For a set $S$ of edges let $\Phi(S)$ be the sum of $\phi(u)+\phi(v)$ over the edges $\{u,v\}$ of $S$, where a
+half-edge contributes its check and its outer point.
+
+Suppose that some correction of least size fails, and let $C^\ast$ be one with the least value of $\Phi$ among the
+failing corrections of least size. The set $E\oplus C^\ast$ has even degree at every check. For the planar and the
+rotated code it has odd degree at $b_1$ and at $b_2$, so it contains a simple path $\gamma$ from $b_1$ to $b_2$. Its
+first and last edges are half-edges, and its \emph{interior} $\gamma'$, the path without them, joins a check on the
+side of $b_1$ to a check on the side of $b_2$. So $\gamma'$ has at least $d-2$ edges: in $\mathcal P_{d,w}$ the
+coordinate $x$ runs from $0$ to $d-2$, and in $\mathcal R_d$ every step changes $x+y$ by $\pm1$, from $0$ to $d-2$.
+For the toric code $E\oplus C^\ast$ is not null-homologous, so it contains a simple cycle $\gamma$ that is not
+null-homologous, and $\gamma$ has at least $m$ edges; we put $\gamma'=\gamma$. In all cases $C^\ast\oplus\gamma$ is a
+correction, so $|\gamma\cap E|\ge|\gamma\cap C^\ast|$ because $C^\ast$ has least size. We label the edges of $\gamma$ in
+$E$ by $\mathsf E$ and those in $C^\ast$ by $\mathsf C$; every edge of $\gamma$ gets exactly one label.
+
+A \emph{window} is a sub-path $\sigma$ of $\gamma'$ between two checks $u\ne v$. We write $n_E$ and $n_C$ for the
+numbers of its labels, $\sigma_E$ and $\sigma_C$ for its sets of $\mathsf E$- and $\mathsf C$-edges, and $T_\sigma$
+for the set of checks of odd degree in $\sigma_C$. An \emph{alternative} to a set $S$ of edges is a set $A$ of edges of
+the graph with the same checks of odd degree as $S$, such that $A$ has an even number of half-edges at $b_1$ (planar
+and rotated code), respectively such that $|S|+|A|<m$ (toric code).
+
+\begin{lemma}\label{cnt:lem-rules}
+Let $\sigma$ be a window from $u$ to $v$.
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item $n_C-n_E\le|A|$ for every alternative $A$ to $\sigma$;
+\item if $n_C-n_E=|A|$ for an alternative $A$ to $\sigma$, then $\Phi(\sigma_C)\le\Phi(\sigma_E)+\Phi(A)$;
+\item $n_C\le|A|$ for every alternative $A$ to $\sigma_C$;
+\item if $n_C=|A|$ for an alternative $A$ to $\sigma_C$, then $\Phi(\sigma_C)\le\Phi(A)$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+For an alternative $A$ to $\sigma$ put $C'=C^\ast\oplus\sigma\oplus A$. It is a correction, since $\sigma\oplus A$ has
+even degree at every check, and $|C'|=|C^\ast|-n_C+n_E+|A|-2k$, where $k$ is the number of edges of $A$ in
+$(C^\ast\setminus\sigma_C)\cup\sigma_E$. It fails, because $C'\oplus C^\ast=\sigma\oplus A$ has an even number of
+half-edges at $b_1$, respectively has fewer than $m$ edges and is therefore null-homologous. Since $C^\ast$ has least
+size, (i) follows. In the case of (ii), $k=0$, so $C'$ is a failing correction of least size; it is the disjoint union
+of $C^\ast\setminus\sigma_C$, $\sigma_E$ and $A$, so $\Phi(C')=\Phi(C^\ast)-\Phi(\sigma_C)+\Phi(\sigma_E)+\Phi(A)$, and
+the choice of $C^\ast$ gives (ii). Parts (iii) and (iv) follow in the same way from $C''=C^\ast\oplus\sigma_C\oplus A$,
+with $|C''|=|C^\ast|-n_C+|A|-2k''$, where $k''$ is the number of edges of $A$ in $C^\ast\setminus\sigma_C$.
+\end{proof}
+
+The certificates apply Lemma~\ref{cnt:lem-rules} with explicit alternatives: in (i) and (ii) a geodesic from $u$ to $v$,
+and in (iii) and (iv) the union of geodesics that join the pairs of a perfect matching of $T_\sigma$ of least total
+length $c(T_\sigma)$. If these geodesics overlap, the edges used an odd number of times form an alternative with fewer
+than $c(T_\sigma)$ edges; so when $n_C=c(T_\sigma)$, (iii) forces them to be disjoint, and (iv) applies to their union.
+In (ii) and (iv) the strongest test uses geodesics of least $\Phi$.
+For $\phi=x+9y$ the least $\Phi$ among all lattice geodesics from $u$ to $v$ is attained by the \emph{canonical
+geodesic}, which takes its steps in increasing order of their $\phi$-increments, that is, in the order $-y,-x,+x,+y$:
+exchanging two consecutive steps whose increments are in the wrong order lowers $\Phi$. Two consecutive
+$\mathsf C$-edges that turn a corner form a window with $n_C=2=|u-v|$, so by (ii) they turn from the smaller to the
+larger $\phi$-increment whenever the other corner is available. We say that a window \emph{fails a test} if (i)--(iv)
+are violated for one of these edge sets. By Lemma~\ref{cnt:lem-rules}, no window of $\gamma'$ fails a test, as long as
+every edge set used in a test is an alternative. Whether it is depends on the graph.
+
+\subsection{The tests in each graph}\label{cnt:regions}
+
+\emph{Planar code.} Every lattice geodesic between two points of the box $B$ stays in $B$. So every geodesic between
+checks of a window is an alternative (it has no half-edge), and the tests use all lattice geodesics, with no condition
+on the position of the window.
+
+\emph{Rotated code.} Two lemmas make the tests valid in $R_d$. The first handles the rough sides.
+
+\begin{lemma}\label{cnt:lem-rough}
+Let $P$ be a set of unit steps forming paths between checks of $R_d$, all of whose points lie in the smooth range
+$-1\le x-y\le d-1$. Then $\mathcal R_d$ contains a set $A$ of edges with the same checks of odd degree as $P$ and an
+even number of half-edges at $b_1$ and at $b_2$, such that $|A|\le|P|$, and $\Phi(A)=\Phi(P)$ if $|A|=|P|$.
+\end{lemma}
+
+\begin{proof}
+A point of $P$ outside $R_d$ lies beyond a rough line. A maximal stretch of a path of $P$ outside $R_d$ leaves $R_d$ by
+a step from a check $z$ to a point $t$ and returns by a step from a point $t'$ to a check $z'$; it stays beyond one
+rough line, since every step changes $x+y$ by $\pm1$. The steps $z\to t$ and $t'\to z'$ cross this line and end in the
+smooth range, so by (c) they are half-edges of $z$ and of $z'$ to the same boundary vertex, with outer points $t$ and
+$t'$. Replace each such stretch by these two half-edges, and let $A$ be the set of edges used an odd number of times.
+A stretch has at least two steps, and exactly two when $t=t'$; then the two half-edges have the same value of $\Phi$
+as the two steps they replace. So $|A|\le|P|$, with equality only if every stretch has two steps and no edge is used
+twice, in which case $\Phi(A)=\Phi(P)$. Half-edges are added in pairs at one boundary vertex.
+\end{proof}
+
+The second handles the smooth sides. Write $\xi=x-y$.
+
+\begin{lemma}[band lemma]\label{cnt:lem-band}
+Let $a,b\in\mathbb Z^2$, let $c\ge\max(\xi(a),\xi(b))$, and let $P$ be a geodesic from $a$ to $b$ of least $\Phi$
+among the geodesics all of whose points satisfy $\xi\le c$. Then every point of $P$ satisfies
+$\xi\ge\min\bigl(\xi(a),\xi(b),c-1\bigr)$. Without the constraint $\xi\le c$, every point of the canonical geodesic
+satisfies $\xi\ge\min(\xi(a),\xi(b))$.
+\end{lemma}
+
+\begin{proof}
+A geodesic uses one horizontal and one vertical direction. If its profile $\xi$ is not monotone, the two directions
+are $+x,+y$ or $-x,-y$. In both cases one of them, $s_1$, raises $\xi$ by $1$ and has the smaller $\phi$-increment
+($+x$ against $+y$, and $-y$ against $-x$), while the other, $s_2$, lowers $\xi$ by $1$. Exchanging two consecutive
+steps $s_2,s_1$ into $s_1,s_2$ lowers $\Phi$ by $2(\phi(s_2)-\phi(s_1))>0$ and raises the point between them by $2$ in
+$\xi$. Suppose that the least value $l$ of $\xi$ on $P$ is below $\min(\xi(a),\xi(b),c-1)$. At the first point of $P$
+with $\xi=l$, the path arrives by a step $s_2$ and leaves by a step $s_1$, from a point at level $l+1\le c-1$; the
+exchange keeps the path at $\xi\le c$ and lowers $\Phi$, a contradiction. Without the constraint the same exchange
+applies at every level, and the canonical geodesic is the unique geodesic of least $\Phi$.
+\end{proof}
+
+For a window $\sigma$ let $\xi_\sigma$ be the least value of $\xi$ on its points. The points of $\sigma$ lie in
+$R_d$, so $\xi_\sigma\ge-1$, and since consecutive points differ by $1$ in $\xi$ and all satisfy $\xi\le d-1$, also
+$\xi_\sigma\le d-2$. The tests for $\mathcal R_d$ use, for each pair of checks of the window, a geodesic of least
+$\Phi$ among those whose points have height $h\ge0$, that is, $\xi\le c=d-1$; in (iii) and (iv) these are taken over
+the pairs of a least-length matching. By Lemma~\ref{cnt:lem-band} and $\xi_\sigma\le d-2$, every such geodesic stays at
+$\xi\ge\xi_\sigma\ge-1$, inside the smooth range. Lemma~\ref{cnt:lem-rough} turns it, or the union of the matching
+geodesics, into an edge set $A$ of $\mathcal R_d$ with no more edges. If $A$ has fewer edges, the window violates (i)
+or (iii) for the alternative $A$; otherwise $\Phi(A)$ equals the $\Phi$ of the geodesics. In both cases a window that
+fails a test violates Lemma~\ref{cnt:lem-rules}. This holds for every $d$.
+
+The tests of a window depend on its position only through the ceiling $\xi\le d-1$. A geodesic between two points
+$a,b$ of a window rises at most $|a-b|\le M$ above $\max(\xi(a),\xi(b))$, where $M$ bounds the number of edges of the
+windows we test. So if all points of a window have height at least $M$, the ceiling does not bind, and the tests are
+those of the planar code (all lattice geodesics).
+
+\emph{Toric code.} The windows we test have at most $M$ edges, and every alternative used has at most $M$ edges, with
+$2M<m$. So $|\sigma|+|A|<m$ for these edge sets, and the tests use all lattice geodesics on the torus, compared by the
+true $\Phi$. Measure the position of a point by its \emph{offset} $o$ from the seam, the representative of its column
+in $\{-\lfloor m/2\rfloor,\dots,\lceil m/2\rceil-1\}$, so that $\phi=o$ for $o\ge0$ and $\phi=m+o$ for $o<0$. A window
+and its alternatives lie in the range of offsets spanned by the window. If this range does not contain both $-1$ and
+$0$, the window lies on one side of the seam, $\phi$ is affine there, and the tests are those of the planar code with
+$\phi(x,y)=x$, whose canonical order is $-x$, then the vertical steps, then $+x$.
+
+\begin{lemma}\label{cnt:lem-seam}
+For a window of at most $M$ edges, the outcome of every test is the same for all $m>4M^2$.
+\end{lemma}
+
+\begin{proof}
+For $m>2M$ the window and its alternatives do not wrap around the torus, and their points have offsets within $M$ of
+the offset of the first point of the window. Only (ii) and (iv), and the choice of a geodesic or matching of least
+$\Phi$, compare values of $\Phi$, and each comparison is between two edge sets with the same number of edges, at most
+$2M$ in total, hence at most $4M$ endpoints. Each side equals $mN+Q$, where $N$ counts its endpoints at negative offsets
+and $Q$ is the sum of the offsets of its endpoints. The difference is $m\,\Delta N+\Delta Q$; $\Delta N$ does not
+depend on $m$, and $\Delta Q$ does not change if all offsets are shifted by the same amount, so measuring them from the
+first point of the window gives $|\Delta Q|\le4M\cdot M<m$. Hence the sign of the difference is the lexicographic sign
+of $(\Delta N,\Delta Q)$, which does not depend on $m$.
+\end{proof}
+
+The certificates evaluate the tests with a fixed large value in place of $m$, and the Lean statements require
+$m\ge L_0=4M(h_0+M)+1$ with $h_0=K+M+1$ (that is, $L_0=1201$ for $M=10$ and $L_0=769$ for $M=8$), which is larger than
+$4M^2$.
+
+\subsection{Counting}\label{cnt:count}
+For a fixed labelled path, the event that it occurs as $\gamma$ with these labels has probability at most
+$p^{n_E}(1-p)^{n_C}$, where $n_E$ and $n_C$ now count the labels of the whole path: its $\mathsf E$-edges lie in $E$,
+and its $\mathsf C$-edges lie in $C^\ast$ and therefore not in $E$. Because $n_E\ge n_C$ on $\gamma$, this is at most
+$\omega_E^{n_E}\omega_C^{n_C}$ with $\omega_E=pX$ and $\omega_C=(1-p)/X$, for every $X\ge1$.
+
+Fix $M\ge3$ and $K=M-1$. A \emph{state} is a walk of $K$ unit steps through $K+1$ distinct points, with a label on
+each step, none of whose windows fails a test. A \emph{successor} of a state appends one labelled step to a point
+outside the walk, such that no window of at most $M$ edges that ends with the new step fails a test; the oldest step is
+then dropped, and $\omega(s\to s')$ is the weight of the new label. If a positive potential $H$ on the states satisfies
+\begin{equation}\label{cnt:row}
+  \sum_{s'\ \text{successor of}\ s}\omega(s\to s')\,H(s')\le\lambda\,H(s)\qquad\text{for every state }s,
+\end{equation}
+then by induction on $n$ the labelled continuations of $n$ steps of a state $s$ weigh at most
+$\lambda^{n}H(s)/\min H$. Every labelled simple path none of whose windows of at most $M$ edges fails a test is such a
+continuation of its first $K$ steps, because each of its windows of at most $M$ edges ends at some step and lies in the
+$M$-step suffix there.
+
+\emph{Planar code.} The tests do not depend on the position of the window, so the states are translation classes of
+labelled walks in $\mathbb Z^2$. A state whose points lie in $B$ has no successor inside $B$ that it lacks in
+$\mathbb Z^2$, so the rows \eqref{cnt:row} of the system on $\mathbb Z^2$ imply those of all states in $B$, and no
+boundary types occur.
+
+\emph{Rotated code.} Here the tests near the top side depend on the heights. Let $h_0=2K+6$. A state whose last point
+has height $h<h_0$ carries $h$; it is a \emph{near} state $(s,h)$. A state whose last point has height $h\ge h_0$ is the
+translation class $s$ of its walk and gets the potential $H(s)$ of the planar system; the tests of its successors are
+those of the planar code, because every point of a window that ends at the new point has height at least
+$h_0-1-M=M+3$. The rows to check are therefore: the rows of the near states, whose successors are near states or, at
+height $h_0$, far states; the rows of the far states at height exactly $h_0$, whose successors at height $h_0-1$ are
+near states; and the rows of the planar system for the far states above $h_0$. Near the bottom side and the rough
+sides the walks of $\mathcal R_d$ are among these walks, with the same tests, so these rows suffice for every
+$d\ge11$; for small $d$ some modelled heights do not occur.
+
+\emph{Toric code.} Here the tests of windows that straddle the seam depend on the offsets. Let $h_0=K+M+1$. A state
+whose last point has offset $o\in[-h_0,h_0-1]$ carries $o$; every other state is the translation class of its walk and
+gets the potential of the system on $\mathbb Z^2$ with $\phi(x,y)=x$. Every window of a far state and of its successors
+lies on one side of the seam, with offsets at least $h_0-1-M=K$ or at most $-h_0+M=-K-1$, so its tests are those of
+the system with $\phi=x$. The rows to check are those of the near states, of the far states at the two interfaces
+$o=h_0$ and $o=-h_0-1$, whose successors at offsets $h_0-1$ and $-h_0$ are near states, and of the system with
+$\phi=x$. By Lemma~\ref{cnt:lem-seam} the tests, and hence the rows, are the same for all $m\ge L_0$. We also need
+$m\ge 2h_0+2M+2$, so that the zone near the seam does not wrap around the torus; this is implied by $m\ge L_0$.
+
+\subsection{The certificates}\label{cnt:cert}
+Table~\ref{cnt:tab-cert} lists the certificates. Each is a positive integer potential on the states of the system
+described above, and every row \eqref{cnt:row} is checked in exact integer arithmetic. The potentials are at most
+$2^{34}$. Lean checks them as described in Section~\ref{sec:lean-count}.
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{@{}lcccccccc@{}}
+\toprule
+code & $M$ & $h_0$ & states & transitions & $p_\ast$ & $X$ & $\lambda$ & largest ratio\\
+\midrule
+planar & $10$ & -- & $3{,}883{,}082$ & $19{,}106{,}700$ & $0.0465$ & $3.091$ & $0.998$ & $0.999306$\\
+rotated & $10$ & $24$ & $82{,}148{,}725+2\cdot3{,}883{,}082$ & $438{,}790{,}694$ & $0.0465$ & $3.091$ & $0.998$ & $1-7.8\cdot10^{-10}$\\
+toric & $10$ & $20$ & $157{,}107{,}748+3\cdot3{,}930{,}982$ & $832{,}352{,}608$ & $0.046$ & $3.12228$ & $0.997$ & $1-1.4\cdot10^{-9}$\\
+toric & $8$ & $16$ & $5{,}084{,}396+3\cdot159{,}004$ & $27{,}561{,}980$ & $0.045$ & $3.1943$ & $0.996$ & $1-1.5\cdot10^{-9}$\\
+\bottomrule
+\end{tabular}
+\caption{The certificates; $p_\ast$, $X$ and $\lambda$ are exact decimals. For the rotated and the toric code the
+states are the near states plus one copy of the far system for each interface and one for the rows above it, and
+likewise the transitions. The last column is the largest ratio of the two sides of \eqref{cnt:row}, rounded to the
+digits shown; the exact check is in integers.}
+\label{cnt:tab-cert}
+\end{table}
+
+The constants of Theorems~\ref{thm:planar}--\ref{thm:toric} are start sums of these potentials. With
+$\omega(s)=\prod\omega$ over the labels of the walk $s$:
+\begin{enumerate}[label=(\alph*),leftmargin=2em]
+\item planar: $K_0=(\omega_E+\omega_C)^2\sum_s\omega(s)H(s)/\min H\le398.91$;
+\item rotated: $K_{\mathrm{rot}}=(\omega_E+\omega_C)^2\max_{h}S(h)/\min H\le366{,}183{,}771.98$, where $S(h)$ is the sum of
+  $\omega(s)H$ over the states whose first point has height $h$, each taken with the potential of its near or far copy;
+\item toric: $K_{\mathrm{tor}}=(\omega_E+\omega_C)\max_{o}S(o)/\min H$, with $S(o)$ defined in the same way by the
+  offset $o$ of the first point; $K_{\mathrm{tor}}\le428{,}572{,}391.6$ for $M=10$ and $K_{\mathrm{tor}}\le383{,}157{,}811$
+  for $M=8$.
+\end{enumerate}
+These values are computed exactly from the certificate data, in the weights at $p=p_\ast$.
+
+\subsection{Proofs}\label{cnt:proofs}
+Below, $p_\ast$, $X$ and $\lambda$ are those of Table~\ref{cnt:tab-cert}. For $p<p_\ast$ put
+\[
+  X_p=X\sqrt{\frac{p_\ast(1-p)}{p(1-p_\ast)}}\ \ge X .
+\]
+Then $\omega_E$ and $\omega_C$ both scale by $\rho(p_\ast,p)$; the rows are linear in the weights and the tests do not
+depend on $p$, so every row holds with $\lambda\rho(p_\ast,p)$ in place of $\lambda$, and the start sums do not
+increase. It therefore suffices to prove each bound at $p=p_\ast$, with $\lambda$ replaced by $\lambda\rho(p_\ast,p)$ for
+smaller $p$. In each case $\PML\le\PMW$.
+
+\begin{proof}[Proof of Theorem~\ref{thm:planar}]
+By Lemma~\ref{cnt:lem-rules} and Section~\ref{cnt:regions}, $\PMW(\mathcal P_{d,w},p)$ is at most the total weight of the
+labelled paths from $b_1$ to $b_2$ none of whose windows fails a test. Bound the two half-edges of each path, summed
+over their labels, by $\omega_E+\omega_C$ each. The interior starts at one of the $w$ checks $(0,y)$ and has at least
+$d-2$ edges, so with the certificate and Section~\ref{cnt:count}
+\[
+  \PMW(\mathcal P_{d,w},p)\le w\,K_0\sum_{\ell\ge d-2}\lambda^{\ell-K}\le w\cdot398.91\cdot\frac{\lambda^{d-11}}{1-\lambda}
+\]
+with $K=9$ and $\lambda=0.998\,\rho(0.0465,p)$. The condition $d\ge11$ makes the interior at least $K$ steps long, so that
+it begins with a state.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{thm:rotated}]
+As for the planar code, now with the tests and the near states of $\mathcal R_d$, valid for every $d$ by
+Section~\ref{cnt:regions}. The path $\gamma$ starts with one of the $d$ half-edges at $b_1$; its interior starts at the
+check $z$ of this half-edge, and the first $K$ steps form a state whose first point has height $h(z)$. The interior has
+at least $d-2$ edges and ends at a check with at most two half-edges to $b_2$. Hence
+\[
+  \PMW(\mathcal R_d,p)\le d\cdot2\cdot K_{\mathrm{rot}}\sum_{\ell\ge d-2}\lambda^{\ell-K}\le 2d\cdot366{,}183{,}771.98\cdot\frac{\lambda^{d-11}}{1-\lambda}
+\]
+with $K=9$ and $\lambda=0.998\,\rho(0.0465,p)$; as for the planar code, $d\ge11$ makes the interior at least $K$ steps long.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{thm:toric}]
+Every point of $\mathcal T_m$ can be the first point of $\gamma$. Fix one, and follow $\gamma$ from it. Its first $\ell-1$
+steps, where $\ell\ge m$ is the length of $\gamma$, form a labelled simple path whose windows pass the tests, and the
+last step closes the cycle; we bound the closing step, summed over its labels, by $\omega_E+\omega_C$, and we do not
+test the windows that contain it. The first $K$ steps form a state whose first point has offset $o$. By
+Lemma~\ref{cnt:lem-seam} and Section~\ref{cnt:count}, for $m\ge L_0$,
+\[
+  \PMW(\mathcal T_m,p)\le m^2K_{\mathrm{tor}}\sum_{\ell\ge m}\lambda^{\ell-1-K}=m^2K_{\mathrm{tor}}\frac{\lambda^{m-1-K}}{1-\lambda}.
+\]
+For $M=10$ we have $K=9$, $h_0=20$, $L_0=1201$, $\lambda=0.997\,\rho(0.046,p)$ and the bound
+$m^2\cdot428{,}572{,}391.6\cdot\lambda^{m-10}/(1-\lambda)$. For $M=8$ we have $K=7$, $h_0=16$, $L_0=769$,
+$\lambda'=0.996\,\rho(0.045,p)$ and the bound $m^2\cdot383{,}157{,}811\cdot\lambda'^{\,m-8}/(1-\lambda')$.
+\end{proof}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{lcccccc}
+\toprule
+$M$ (longest window) & 4 & 6 & 8 & 9 & 10 & 11\\
+\midrule
+states & 240 & 6{,}258 & 157{,}618 & 779{,}946 & 3{,}883{,}082 & 19{,}106{,}700\\
+$p$ at which the Perron root is $1$ & 0.0420 & 0.0445 & 0.0459 & 0.0462 & 0.0468 & 0.0470\\
+\bottomrule
+\end{tabular}
+\caption{Growth of labelled paths in $\mathbb Z^2$ under the tests with $\phi=x+9y$ on windows of at most $M$ edges,
+minimized over $X$ (floating-point Perron roots). Only the certificates of Section~\ref{cnt:cert} enter the proofs.}
+\label{cnt:tab-growth}
+\end{table}
+
+\begin{remark}\label{cnt:remarks}
+Without exclusion rules the count above is the argument of Dennis, Kitaev, Landahl and Preskill~\cite{DKLP02}, with the
+labels in place of the half-weight condition, and it gives about $0.037$. The rules remove part of the multiplicity of
+the union bound: they keep only the crossing and the labels of one canonical minimum-weight correction.
+Table~\ref{cnt:tab-growth} shows how slowly the threshold of the method grows with the length of the windows. On the
+torus the tie-break has no vertical term, since a function on $\mathbb Z_m^2$ that is linear in both directions would
+have two seams; with $\phi=x$ the growth rate reaches $1$ at about $0.0465$ for $M=10$, slightly below the planar
+value. The rotated code uses the potential of the planar certificate far from the top side, so the two theorems hold at
+the same $p_\ast$.
+\end{remark}
+
+\section{Measurement errors}\label{sec:phenom}
+
+In this section we prove Theorem~\ref{thm:phenom}. The decoding graph $G=\mathcal Q_{d,w,T}$ of
+Section~\ref{sec:graphs} has the points of the box $B=[0,T]\times[0,w-1]\times[0,d-2]$ as checks, an edge between any
+two checks at distance $1$, and half-edges from the checks $(t,x,0)$ to $b_1$ and from the checks $(t,x,d-2)$ to $b_2$.
+We write $|u-v|$ for the $\ell^1$ distance of two checks, and a path between checks $u,v$ with $|u-v|$ edges is a
+\emph{geodesic}. Every geodesic between two checks of $B$ stays in
+$B$, since $B$ is a box.
+
+\subsection{Failure paths and exclusion rules}\label{phen:rules}
+Let $\phi(t,x,y)=81t+x+9y$, and for a set $S$ of edges let $\Phi(S)$ be the sum of $\phi(u)+\phi(v)$ over the edges
+$\{u,v\}\in S$ between checks. If some correction of least size fails, let $C^\ast$ be one with the least value of $\Phi$ among the failing
+corrections of least size.
+The set $E\oplus C^\ast$ has even degree at every check and odd degree at $b_1$ and $b_2$, so it contains a simple path
+$\gamma$ from $b_1$ to $b_2$. The interior of $\gamma$ (without its two half-edges) meets all $d-1$ rows, so it has at
+least $d-2$ edges. Since $C^\ast\oplus\gamma$ is a correction, $|\gamma\cap E|\ge|\gamma\cap C^\ast|$. We label the
+edges of $\gamma$ in $E$ by $\mathsf E$ and those in $C^\ast$ by $\mathsf C$; every edge of $\gamma$ gets one label. A
+\emph{window} is a sub-path $\sigma$ of $\gamma$ between checks $u\ne v$ that contains no half-edge; $n_E$ and $n_C$
+count its labels, and $\sigma_E$, $\sigma_C$ are its labelled edge sets.
+
+\begin{lemma}\label{phen:lem-rules}
+Every window $\sigma$ from $u$ to $v$ satisfies:
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item $n_C-n_E\le|u-v|$;
+\item if $n_C-n_E=|u-v|$, then $\Phi(\sigma_C)\le\Phi(\sigma_E)+\Phi(P')$ for every geodesic $P'$ from $u$ to $v$;
+\item $n_C\le c(T_\sigma)$, the least total length of a perfect matching of the set $T_\sigma$ of odd-degree checks of
+  $\sigma_C$;
+\item if $n_C=c(T_\sigma)$, then $\Phi(\sigma_C)\le\sum_k\Phi(P_k)$ for any geodesics $P_k$ joining the pairs of a
+  least-length perfect matching of $T_\sigma$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+(i) For a geodesic $P'$ from $u$ to $v$, $C'=C^\ast\oplus\sigma\oplus P'$ is a correction and
+$|C'|\le|C^\ast|-n_C+n_E+|u-v|$. (ii) In the equality case $|C'|=|C^\ast|-2k$, where $k$ is the number of edges of
+$P'$ in $(C^\ast\setminus\sigma_C)\cup\sigma_E$; hence $k=0$, and $C'$ has least size. It fails, because
+$C'\oplus C^\ast=\sigma\oplus P'$ has no half-edge, and $\Phi(C')=\Phi(C^\ast)-\Phi(\sigma_C)+\Phi(\sigma_E)+\Phi(P')$;
+the choice of $C^\ast$ gives the inequality. (iii) and (iv) follow in the same way from $C'=C^\ast\oplus\sigma_C\oplus
+P''$, where $P''$ is the set of edges used an odd number of times by the $P_k$; if the $P_k$ overlap, then
+$|P''|<c(T_\sigma)$ and $|C'|<|C^\ast|$.
+\end{proof}
+
+The least value of $\Phi$ over the geodesics from $u$ to $v$ is attained by the geodesic that takes its unit steps in
+increasing order of their $\phi$-increments. By (ii), every run of $\mathsf C$-edges of $\gamma$ is this staircase; in
+particular two $\mathsf C$-edges that turn a corner turn from the smaller to the larger $\phi$-increment.
+
+\subsection{Counting}\label{phen:count}
+For a fixed labelled path, the event that it is $\gamma$ with these labels has probability at most
+$p^{n_E}(1-p)^{n_C}$, where $n_E$ and $n_C$ now count the labels of the whole path: its $\mathsf E$-edges lie in $E$, and
+its $\mathsf C$-edges lie in $C^\ast$ and therefore not in $E$. Because $n_E\ge n_C$ on $\gamma$, this is at most $\omega_E^{n_E}\omega_C^{n_C}$ with
+$\omega_E=pX$ and $\omega_C=(1-p)/X$, for every $X\ge1$.
+
+Fix $M\ge3$ and $K=M-1$. A \emph{state} is a walk of $K$ unit steps through $K+1$ distinct points, with a label on each
+step, all of whose windows satisfy Lemma~\ref{phen:lem-rules}. A \emph{successor} of a state appends one step to a
+point outside the walk, with a label, such that every window of at most $M$ edges that ends with the new step
+satisfies the lemma; the oldest step is then dropped. If a positive potential $H$ on the states satisfies
+\begin{equation}\label{phen:row}
+  \sum_{s'\ \text{successor of}\ s}\omega(s\to s')\,H(s')\le\lambda\,H(s)\qquad\text{for every state }s,
+\end{equation}
+then by induction on $m$ the labelled continuations of $m$ steps of a state $s$ weigh at most
+$\lambda^mH(s)/\min H$. Every labelled simple path whose windows satisfy the lemma is such a continuation of its first
+$K$ steps, because each of its windows of at most $M$ edges ends at some step and lies in the $M$-step suffix there.
+
+\begin{lemma}\label{phen:lem-box}
+For a state whose points lie in $B$, every successor inside $B$ is a successor in $\mathbb Z^3$ with the same steps
+and labels. Hence the rows \eqref{phen:row} of the translation-invariant system on $\mathbb Z^3$ imply the rows of all
+states in $B$.
+\end{lemma}
+
+\begin{proof}
+Every alternative used in Lemma~\ref{phen:lem-rules}, a geodesic between two points of the window or a matching
+geodesic, lies in the bounding box of the window's points, hence in $B$. So every window excluded in $\mathbb Z^3$ is
+excluded in $B$, and in $B$ a state has no successor that it lacks in $\mathbb Z^3$. Since $H>0$, the rows in $B$
+follow.
+\end{proof}
+
+So one certificate for the bulk system covers every box; no boundary types occur.
+
+\subsection{The certificate}\label{phen:cert}
+The certificate is a positive integer potential for the bulk system with $M=8$: $5{,}263{,}174$ states and
+$44{,}599{,}560$ transitions, $p_\ast=2/125$, $X=231/50$, $\lambda=499/500$, potentials at most $2^{32}$. Every row
+\eqref{phen:row} is checked in exact integer arithmetic. The largest ratio of the two sides of \eqref{phen:row} is
+$0.997805$ (the Perron root of the system is $0.995809$), and the start sum
+$K_0=(\omega_E+\omega_C)^2\sum_s\omega(s)H(s)/\min H$ is at most $1.2827$. Lean checks the certificate in its kernel,
+and also with compiled evaluation (Table~\ref{tab:results}).
+
+\begin{proof}[Proof of Theorem~\ref{thm:phenom}]
+By Lemma~\ref{phen:lem-rules} and the counting above, $\PMW(\mathcal Q_{d,w,T},p)$ is at most the total weight of
+the labelled paths from $b_1$ to $b_2$ whose windows satisfy the lemma. Bound the two half-edges of each path, summed
+over their labels, by $\omega_E+\omega_C$ each. The interior of the path starts at one of the $w(T+1)$ checks of the
+rows $y=0$ and has at least $d-2$ edges. With the certificate, Lemma~\ref{phen:lem-box} gives at $p=p_\ast=2/125$
+\[
+  \PMW(\mathcal Q_{d,w,T},p)\le w(T+1)K_0\sum_{\ell\ge d-2}\lambda^{\ell-7}\le(T+1)\,w\cdot1.2827\cdot
+  \frac{\lambda^{d-9}}{1-\lambda}.
+\]
+The condition $d\ge9$ makes the interior at least $7$ steps long, so that it begins with a state. For $p<p_\ast$ take $X_p=X\sqrt{p_\ast(1-p)/(p(1-p_\ast))}\ge X$. Then $\omega_E$ and $\omega_C$ both scale by
+$\rho(p_\ast,p)$; the rows are linear in the weights and the rules do not depend on $p$, so every row holds with
+$\lambda\rho(p_\ast,p)$, and $K_0$ does not increase. Finally $\PML\le\PMW$.
+\end{proof}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lccccc}
+\toprule
+$M$ (longest window) & 4 & 5 & 6 & 7 & 8\\
+\midrule
+states & 968 & 8{,}352 & 72{,}294 & 616{,}322 & 5{,}263{,}174\\
+$p$ at which the Perron root is $1$ & 0.0150 & 0.0152 & 0.0157 & 0.0159 & 0.0161\\
+\bottomrule
+\end{tabular}
+\caption{Growth of labelled paths in the bulk under the rules of Lemma~\ref{phen:lem-rules} on windows of at most $M$
+edges (floating-point Perron roots). Only the certificate of Section~\ref{phen:cert} enters the proof.}
+\label{phen:tab}
+\end{table}
+
+\begin{remark}\label{phen:remarks}
+The argument of Dennis, Kitaev, Landahl and Preskill~\cite{DKLP02} gives $0.0114$ for this noise model; it counts
+self-avoiding walks on the cubic lattice and uses the numerical value $4.684$ of their connective constant; with the
+proven upper bound $4.739$ on this constant~\cite{PT00}, the same argument gives $0.0112$.
+Numerically the threshold of minimum-weight matching is $0.0293(2)$~\cite{WHP03}. Lemma~\ref{phen:lem-box} uses that
+$B$ is a box. We do not treat the rotated or the toric code with measurement errors; there the rules would need the
+modifications of Section~\ref{sec:count}.
+\end{remark}
+
+\section{A single-scale criterion for optimal decoding}\label{sec:single}
+
+In Section~\ref{sec:cert} we bounded ML decoding through an auxiliary decoder whose block events can be sampled. Here we bound ML decoding directly, through a sample from the posterior, by quantities of a single finite window. Nothing in this section is checked in Lean, and we have not certified the criterion at any $p$; what a certificate would need is discussed in Remark~\ref{rem:single-status}.
+
+The idea is as follows. If $X$ is drawn from the posterior given the syndrome, then $X$ and the true error $E$ lie in different classes with probability between $\PML$ and $2\PML$. When they do, $E\oplus X$ contains a path between the rough sides, so a chain of well-separated tiles along the path all see a long disagreement path in their cores. Because the posterior is the true conditional law, the probability of such a chain factorizes approximately over the windows of the tiles, with one factor per window that depends only on the window. No induction over scales is needed.
+
+\subsection{Windows and window posteriors}\label{sec:windows}
+Throughout this section the code is $\mathcal P=\mathcal P_{d,w}$ with checks $V$, the error probability is $p\in(0,\tfrac12)$, and $J=\log\frac{1-p}{p}$. For an edge set $X$ let $\operatorname{cl}(X)$ be the parity of $|X\cap\delta(b_1)|$. The posterior given a syndrome $D$ is
+\[
+\mu_D(X)=\frac{e^{-J|X|}\,\mathbf 1\{\partial X=D\}}{Z(D)},\qquad Z(D)=\sum_{\partial X=D}e^{-J|X|}.
+\]
+Since $\Pr(E=X)=(1-p)^{N}e^{-J|X|}$, where $N$ is the number of edges, $\mu_D(X)=\Pr(E=X\mid\partial E=D)$. We write $D=\partial E$ and draw $X$ from $\mu_D$, independently of $E$ given $D$. Then the pair $(E,X)$ is exchangeable, and each of $E$ and $X$ contains each edge independently with probability $p$.
+
+For a set $b\subseteq V$ of checks let $\inter(b)$ be the set of edges with both ends in $b$ together with the half-edges at checks of $b$, let $\cut(b)$ be the set of edges with exactly one end in $b$, and let $W(b)=\inter(b)\cup\cut(b)$. Every edge at a check of $b$ lies in $W(b)$, so $D_b=D\cap b$ depends only on $E\cap W(b)$. The \emph{window posterior} is the law on subsets $x\subseteq W(b)$ given by
+\[
+\mu_b(x\mid D_b)\propto e^{-J|x|}\,\mathbf 1\{\partial x\cap b=D_b\},
+\]
+with no constraint at the outer ends of cut edges or at $b_1,b_2$. Since $E\cap W(b)$ contains each edge of $W(b)$ independently with probability $p$,
+\begin{equation}\label{eq:window-matched}
+\mu_b(\cdot\mid D_b)=\Pr\bigl(E\cap W(b)\in\cdot\ \big|\ D_b\bigr).
+\end{equation}
+For $x\subseteq W(b)$ the \emph{cut pattern} is $x\cap\cut(b)$. Let $\pi_b(c\mid D_b)$ be the probability under $\mu_b(\cdot\mid D_b)$ that the cut pattern is $c$, and let $\Psi^b_c$ be the law of $x\cap\inter(b)$ under $\mu_b(\cdot\mid D_b)$ given that the cut pattern is $c$. Thus $\Psi^b_c(y)\propto e^{-J|y|}\,\mathbf 1\{\partial y\cap b=D_b\oplus\partial_{\mathrm{in}}c\}$ for $y\subseteq\inter(b)$, where $\partial_{\mathrm{in}}c$ is the set of checks of $b$ that meet an odd number of edges of $c$; $\Psi^b_c$ depends only on $c$ and $D_b$. The \emph{window two-replica law} $\nu_b$ is the law of $(E\cap W(b),X_b)$, where $X_b$ is drawn from $\mu_b(\cdot\mid D_b)$ given $E$. By \eqref{eq:window-matched}, it is also the law of two independent samples from $\mu_b(\cdot\mid D_b)$ with $D_b$ drawn from its law.
+
+\paragraph{Geometry.} Fix integers $r_t\ge1$ (tile radius), $r_c>r_t$ (core radius), $h_w\ge r_c$ (window radius) and $r_e\ge 2h_w+r_t+1$ (exit radius), and a lattice $\Lambda=o+s\mathbb Z^2$ with $s=2r_t$. Balls are $\ell_\infty$ balls $B(a,r)$ in $\mathbb Z^2$. For $a\in\Lambda$ the tile is $\mathsf T(a)=B(a,r_t)$, the window is $b(a)=B(a,h_w)\cap V$, and $\core(a)$ is the set of edges between checks of $B(a,r_c)\cap V$; the tiles cover $\mathbb Z^2$ and $\core(a)\subseteq\inter(b(a))$. For an edge set $S$, the event $\Long_a(S)$ holds if $S$ contains a path of edges of $\core(a)$ from a check of $\mathsf T(a)$ to a check at distance $r_c$ from $a$. The two window quantities are
+\begin{align*}
+\eL(a)&=\nu_{b(a)}\bigl(\Long_a(x_1\oplus x_2)\bigr),\\
+\tau(a)&=\mathbb E\,\TV\Bigl(\Psi^{b(a)}_{E\cap\cut(b(a))}\big|_{\core(a)},\ \mu_{b(a)}(\cdot\mid D_{b(a)})\big|_{\core(a)}\Bigr),
+\end{align*}
+where $(x_1,x_2)$ has law $\nu_{b(a)}$, $|_{\core(a)}$ denotes the marginal law of the restriction to $\core(a)$, and the expectation is over $E$. Thus $\eL(a)$ is the probability that the true error and one exact sample of the window posterior differ by a long path in the core, and $\tau(a)$ measures how much the true values on the cut edges influence the posterior law of the core. Put
+\[
+\theta=\max_a\bigl(\eL(a)+2\sqrt{\tau(a)}\bigr),
+\]
+the maximum over the $a\in\Lambda$ whose tile meets $V$, so that windows clipped by the sides of the code are included. Finally let $C(r_e)$ be the number of $z\in s\mathbb Z^2$ with $r_e+1-r_t\le\|z\|_\infty\le r_e+1+r_t$, and $m_0=\lceil(d-1)/(2r_e+1)\rceil$.
+
+\subsection{The criterion}\label{sec:criterion-statement}
+
+\begin{theorem}[single-scale criterion]\label{thm:single}
+If $d-2\ge2r_c$, then
+\[
+\PML(\mathcal P_{d,w},p)\le\Pr\bigl(\operatorname{cl}(X)\ne\operatorname{cl}(E)\bigr)\le\Bigl(\frac{w}{r_t}+4\Bigr)\,C(r_e)^{m_0-1}\theta^{m_0}.
+\]
+\end{theorem}
+
+The criterion is useful when $C(r_e)\,\theta<1$. The next corollary uses a compact geometry, in which only four kinds of windows occur.
+
+\begin{corollary}\label{cor:compact}
+Let $u\ge2$ and take $(r_t,r_c,h_w,r_e)=(4u,5u,7u,18u+1)$ and $\Lambda=8u\,\mathbb Z^2$. Consider four windows: the bulk window $B(a,7u)$ far from the sides, and the windows centred on a rough side, on a smooth side and at a corner, far from the other sides. Let $\theta_4$ be the largest value of $\eL+2\sqrt\tau$ over these four windows at $p_\ast$. If $16\,\theta_4<1$, then for every $p\le p_\ast$ the ML failure probability of $\mathcal P_{d,w}$ tends to zero exponentially in $d$ as $d\to\infty$ with $w\le d^{k}$ for any fixed $k$. In particular the optimal threshold of the planar code is at least $p_\ast$.
+\end{corollary}
+
+\begin{proof}
+Here $C(r_e)=16$: the points of $8u\,\mathbb Z^2$ in the ring $14u+2\le\|z\|_\infty\le22u+2$ are those with $\|z\|_\infty=16u$, since $8u<14u+2$ and $24u>22u+2$ for $u\ge2$. Suppose first that $w-1$ and $d-2$ are multiples of $8u$ with $w-1\ge8u$ and $d-2\ge16u$. The centres $a$ whose tiles meet $V$ have $a_x\in\{0,8u,\dots,w-1\}$ and $a_y\in\{0,8u,\dots,d-2\}$. A window $B(a,7u)$ meets a side only if $a$ lies on that side, and it does not reach the opposite side. Interior windows are translates of each other, windows centred on the same side are translates along it, and opposite sides and the four corners are exchanged by the reflections of $\mathcal P_{d,w}$. The window quantities are invariant under these maps, so $\theta=\theta_4$ at $p_\ast$, and Theorem~\ref{thm:single} gives $\PML(\mathcal P_{d,w},p_\ast)\le(\frac{w}{4u}+4)\,16^{m_0-1}\theta_4^{m_0}$ with $m_0=\lceil(d-1)/(36u+3)\rceil$. For general $d\ge16u+2$ and $w\ge1$, let $d'\le d$ be the largest integer with $8u\mid d'-2$, and $w'\ge\max(w,8u+1)$ the smallest integer with $8u\mid w'-1$. Then $d'>d-8u$, $d'\ge16u+2$ and $w'<\max(w,8u+1)+8u$, and $\PML(\mathcal P_{d,w},p)\le\PML(\mathcal P_{d',w'},p_\ast)$ by Lemma~\ref{lem:monoq} and Proposition~\ref{prop:monosize}. Since $\lceil(d'-1)/(36u+3)\rceil\ge m_0-1$ and $16^{m-1}\theta_4^{m}$ decreases in $m$, this gives $\PML(\mathcal P_{d,w},p)\le(\frac{w'}{4u}+4)\,16^{m_0-2}\theta_4^{m_0-1}$ with $m_0=\lceil(d-1)/(36u+3)\rceil$.
+\end{proof}
+
+\subsection{Proof of Theorem~\ref{thm:single}}\label{sec:single-proof}
+
+\begin{lemma}\label{lem:sampling}
+\textup{(a)} $\PML(\mathcal P_{d,w},p)\le\Pr(\operatorname{cl}(X)\ne\operatorname{cl}(E))\le2\,\PML(\mathcal P_{d,w},p)$.
+\textup{(b)} If $\operatorname{cl}(X)\ne\operatorname{cl}(E)$, then $Y=E\oplus X$ contains a path of edges between checks from row $0$ to row $d-2$.
+\textup{(c)} If moreover $d-2\ge2r_c$, then $\Long_a(Y)$ holds for every $a\in\Lambda$ whose tile contains a check of that path.
+\end{lemma}
+
+\begin{proof}
+(a) Given $D$, the errors $E$ and $X$ are independent with law $\mu_D$. With $p_i$ the posterior probability of class $i$, $\Pr(\operatorname{cl}(X)\ne\operatorname{cl}(E)\mid D)=2p_0p_1$, while ML decoding fails with conditional probability $\min(p_0,p_1)$. Since $\max(p_0,p_1)\ge\frac12$, we have $\min(p_0,p_1)\le2p_0p_1\le2\min(p_0,p_1)$. Take expectations.
+(b) $Y$ has even degree at every check and odd degree at $b_1$, so the component of $b_1$ in $Y$ contains $b_2$, and $Y$ contains a simple path from $b_1$ to $b_2$. Remove its two half-edges.
+(c) Let $v$ be a check of the path in $\mathsf T(a)$. One of the two ends of the path, in rows $0$ and $d-2$, is at distance at least $(d-2)/2\ge r_c$ from $a$. Follow the path from $v$ towards that end up to the first check at distance $r_c$ from $a$; the distance to $a$ changes by at most one per step, so this piece is a path of edges of $\core(a)$.
+\end{proof}
+
+In the next two lemmas $V_1,\dots,V_m\subseteq V$ are sets of checks with pairwise disjoint sets $W(V_i)$, and $c_i(X)=X\cap\cut(V_i)$.
+
+\begin{lemma}\label{lem:markov}
+\textup{(a)} Under $\mu_D$, given $c_1(X),\dots,c_m(X)$, the sets $X\cap\inter(V_i)$ are independent with laws $\Psi^{V_i}_{c_i(X)}$.
+\textup{(b)} For every function $F\ge0$ of the cut patterns and of $D$,
+$\mathbb E\bigl[\sum_c\pi(c\mid D)F(c,D)\bigr]=\mathbb E\bigl[F(c(E),D)\bigr]$, where $\pi(c\mid D)=\mu_D(c_i(X)=c_i\text{ for all }i)$.
+\end{lemma}
+
+\begin{proof}
+(a) $\mu_D(X)$ is proportional to $e^{-J|X|}$ times one parity constraint for each check. The constraint at a check of $V_i$ involves only edges of $W(V_i)$, hence only edges of $\inter(V_i)$ once $c_i(X)$ is fixed. The constraint at a check outside all $V_i$ involves no edge of any $\inter(V_i)$, and the boundary vertices carry no constraint. So the conditional law factorizes, and the factor of $\inter(V_i)$ is proportional to $e^{-J|y|}\mathbf 1\{\partial y\cap V_i=D_{V_i}\oplus\partial_{\mathrm{in}}c_i\}$, which is $\Psi^{V_i}_{c_i}$. It does not depend on $X$ outside $\bigcup_i\inter(V_i)$.
+(b) $\pi(c\mid D)=\Pr(c(E)=c\mid D)$, since $\mu_D$ is the conditional law of $E$; take expectations.
+\end{proof}
+
+\begin{lemma}[decoupling]\label{lem:decoupling}
+Let $K_i\subseteq\inter(V_i)$, and let $A_i$ be an event that depends only on $(E\cap K_i,X\cap K_i)$. Put $\nu_i=\nu_{V_i}(A_i)$, with $A_i$ evaluated on $(x_1\cap K_i,x_2\cap K_i)$, and $\tau_i=\mathbb E\,\TV(\Psi^{V_i}_{E\cap\cut(V_i)}|_{K_i},\mu_{V_i}(\cdot\mid D_{V_i})|_{K_i})$. Then
+\[
+\Pr(A_1\cap\dots\cap A_m)\le\prod_{i=1}^m\bigl(\nu_i+2\sqrt{\tau_i}\bigr).
+\]
+\end{lemma}
+
+\begin{proof}
+Write $c=(c_i(E))_i$ and $c'=(c_i(X))_i$. Given $D$, the errors $E$ and $X$ are independent with law $\mu_D$, so by Lemma~\ref{lem:markov}(a), given $(D,c,c')$, the pairs $(E\cap\inter(V_i),X\cap\inter(V_i))$ are independent with laws $\Psi^{V_i}_{c_i}\times\Psi^{V_i}_{c'_i}$. Hence
+\[
+\Pr(A_1\cap\dots\cap A_m\mid D,c,c')=\prod_ig_i(c_i,c'_i),\qquad g_i(c,c')=\bigl(\Psi^{V_i}_c\times\Psi^{V_i}_{c'}\bigr)(A_i).
+\]
+Let $\lambda_i=(\mu_{V_i}\times\mu_{V_i})(A_i)$, a function of $D_{V_i}$, and $t_i(c)=\TV(\Psi^{V_i}_c|_{K_i},\mu_{V_i}(\cdot\mid D_{V_i})|_{K_i})$, a function of $c$ and $D_{V_i}$. Since $\TV(P\times P',Q\times Q')\le\TV(P,Q)+\TV(P',Q')$, we have $g_i(c,c')\le\lambda_i+t_i(c)+t_i(c')$. Expanding the product over ordered partitions $(I_0,I_1,I_2)$ of $\{1,\dots,m\}$, and using that $c$ and $c'$ are independent with law $\pi(\cdot\mid D)$ given $D$,
+\[
+\Pr(A_1\cap\dots\cap A_m)\le\sum_{(I_0,I_1,I_2)}\mathbb E\bigl[L_{I_0}\langle T_{I_1}\rangle\langle T_{I_2}\rangle\bigr],
+\]
+where $L_I=\prod_{i\in I}\lambda_i$, $T_I(c)=\prod_{i\in I}t_i(c_i)$ and $\langle\cdot\rangle$ is the average over $c$ with law $\pi(\cdot\mid D)$. Since $0\le\langle T\rangle\le1$, the Cauchy--Schwarz inequality gives
+\[
+\mathbb E\bigl[L\langle T_1\rangle\langle T_2\rangle\bigr]\le\bigl(\mathbb E[L\langle T_1\rangle^2]\,\mathbb E[L\langle T_2\rangle^2]\bigr)^{1/2}\le\bigl(\mathbb E[L\langle T_1\rangle]\,\mathbb E[L\langle T_2\rangle]\bigr)^{1/2}.
+\]
+By Lemma~\ref{lem:markov}(b), $\mathbb E[L_{I_0}\langle T_{I_1}\rangle]=\mathbb E[L_{I_0}(D)\,T_{I_1}(c(E))]$. Its factors $\lambda_i$ ($i\in I_0$) and $t_i(E\cap\cut(V_i))$ ($i\in I_1$) are functions of $E\cap W(V_i)$ for distinct $i$, hence independent, and $\mathbb E\lambda_i=\nu_i$ by \eqref{eq:window-matched}. So $\mathbb E[L_{I_0}\langle T_{I_1}\rangle]=\prod_{I_0}\nu_i\prod_{I_1}\tau_i$, and likewise for $I_2$. Each term of the sum is therefore at most $\prod_{I_0}\nu_i\prod_{I_1\cup I_2}\sqrt{\tau_i}$, and the sum of these terms is $\prod_i(\nu_i+2\sqrt{\tau_i})$.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{thm:single}]
+By Lemma~\ref{lem:sampling}(a) it suffices to bound $\Pr(\operatorname{cl}(X)\ne\operatorname{cl}(E))$. On this event let $\Gamma=(\gamma_0,\dots,\gamma_n)$ be the checks of the path of Lemma~\ref{lem:sampling}(b), chosen by a fixed rule, with $\gamma_0$ in row $0$ and $\gamma_n$ in row $d-2$. Let $z_1\in\Lambda$ be the centre of a tile containing $\gamma_0$, chosen by a fixed rule, and $k_1=\max\{k:\|\gamma_k-z_1\|_\infty\le r_e\}$. While $k_i<n$, let $v_i=\gamma_{k_i+1}$, let $z_{i+1}$ be the centre of a tile containing $v_i$, and let $k_{i+1}=\max\{k:\|\gamma_k-z_{i+1}\|_\infty\le r_e\}$. Since $\|v_i-z_{i+1}\|_\infty\le r_t\le r_e$, we have $k_{i+1}>k_i$, so the chain $z_1,\dots,z_m$ ends with $k_m=n$. It has the following properties.
+\begin{enumerate}[label=(\roman*),leftmargin=2em]
+\item $\Long_{z_i}(Y)$ holds for every $i$, by Lemma~\ref{lem:sampling}(c).
+\item One step along $\Gamma$ changes the distance to $z_i$ by at most one, so $\|v_i-z_i\|_\infty=r_e+1$ and $r_e+1-r_t\le\|z_{i+1}-z_i\|_\infty\le r_e+1+r_t$. Since $z_{i+1}-z_i\in s\mathbb Z^2$, there are at most $C(r_e)$ choices of $z_{i+1}$ given $z_i$.
+\item For $j>i$ the index of $v_{j-1}$ exceeds $k_i$, so $\|v_{j-1}-z_i\|_\infty>r_e$ and $\|z_j-z_i\|_\infty>r_e-r_t\ge2h_w+1$. The windows $b(z_i)$ are therefore pairwise at distance at least $2$, and the sets $W(b(z_i))$ are pairwise disjoint.
+\item The projection of $B(z_i,r_e)$ to the vertical axis is an interval of $2r_e+1$ integers. Consecutive intervals leave no gap, since $\gamma_{k_i}\in B(z_i,r_e)$ and $v_i\in B(z_{i+1},r_e)$ are adjacent; the first contains $0$ and the last contains $d-2$. Hence $m(2r_e+1)\ge d-1$, that is, $m\ge m_0$.
+\item There are at most $2$ lattice values within $r_t$ of row $0$ for the vertical coordinate of $z_1$, and at most $(w-1)/(2r_t)+2$ for its horizontal coordinate, so at most $w/r_t+4$ choices of $z_1$.
+\end{enumerate}
+Call a sequence $(z_1,\dots,z_{m_0})$ in $\Lambda$ \emph{admissible} if every $z_i$ is the centre of a tile that meets $V$ and the sequence satisfies the conditions on the $z_i$ in (ii), (iii) and (v). By (iv), the first $m_0$ centres of the chain form an admissible sequence, so the event $\operatorname{cl}(X)\ne\operatorname{cl}(E)$ is contained in the union, over admissible sequences, of the events $\bigcap_{i\le m_0}\Long_{z_i}(E\oplus X)$. For a fixed admissible sequence, Lemma~\ref{lem:decoupling} with $V_i=b(z_i)$, $K_i=\core(z_i)$ and $A_i=\Long_{z_i}(E\oplus X)$ bounds the probability of this intersection by $\prod_i(\eL(z_i)+2\sqrt{\tau(z_i)})\le\theta^{m_0}$. There are at most $(w/r_t+4)\,C(r_e)^{m_0-1}$ admissible sequences.
+\end{proof}
+
+\subsection{Remarks}
+
+\begin{lemma}\label{lem:tau}
+For every window $b=b(a)$, with $E_{\cut}=E\cap\cut(b)$ and $E_{\core}=E\cap\core(a)$,
+\[
+\tau(a)=\mathbb E\bigl[(1-\eta_b)_+\bigr],\qquad \eta_b=\frac{\Pr(E_{\cut}\mid D_b)}{\Pr(E_{\cut}\mid D_b,E_{\core})}.
+\]
+\end{lemma}
+
+\begin{proof}
+For laws $P,Q$ on a finite set, $\TV(P,Q)=\sum_y(P(y)-Q(y))_+=\mathbb E_{y\sim P}[(1-Q(y)/P(y))_+]$. Take $P=\Psi^b_c|_{\core(a)}$ and $Q=\mu_b(\cdot\mid D_b)|_{\core(a)}$ with $c=E_{\cut}$. Given $(D_b,E_{\cut})$, the true $E_{\core}$ has law $P$, by \eqref{eq:window-matched} and the definition of $\Psi^b_c$. Moreover $Q(y)/P(y)=\pi_b(c\mid D_b)/\pi_b(c\mid D_b,\text{core}=y)$, and by \eqref{eq:window-matched} the two factors are the conditional probabilities in $\eta_b$.
+\end{proof}
+
+Both probabilities in $\eta_b$ are ratios of partition functions of the planar window graph with some edges fixed. So $\tau(a)$ is the mean of a $[0,1]$-valued function of the true errors alone and needs no posterior sample; only $\eL(a)$ needs one exact posterior sample per sample of the window errors, the true errors being the other replica.
+
+\begin{remark}[sharper counts]
+The admissible sequences of the proof are walks on the coarse lattice $s\mathbb Z^2$ whose steps have a fixed length and whose points are pairwise at least that far apart. Their number is submultiplicative in the length, so $C(r_e)$ may be replaced by $C_{\mathrm{eff}}=a_K^{1/K}$ at the cost of a constant factor, where $a_K$ is the number of such walks of $K$ steps. In the compact geometry of Corollary~\ref{cor:compact} an exhaustive count gives $a_7=34{,}640{,}200$, so $C_{\mathrm{eff}}<11.95$ instead of $16$. Each step of the chain also moves at most $r_e+1+r_t$, which raises the exponent $m_0$ to about $d/(22u)$ in that geometry.
+\end{remark}
+
+\begin{remark}[status]\label{rem:single-status}
+The proof uses only that the errors are independent, that the posterior is the true conditional law, that the checks are local, and that a decoding failure produces a crossing. The window quantities can be computed exactly for the planar code: the window posterior is a planar Ising model, whose partition functions are Pfaffians \cite{Kas61,Fis61}. A certificate of the criterion at some $p$ would bound $\eL$ and $\tau$ for the four windows of Corollary~\ref{cor:compact} by exact binomial confidence bounds, as in Section~\ref{sec:cert}, but every sample would need an exactly computed indicator, with certified numerics, on windows whose side heuristic estimates put near $10^3$ at $p=0.1$. We have not attempted this. The certificate of Section~\ref{sec:cert} avoids exact numerics altogether (see the end of Section~\ref{sec:cert-marg}).
+\end{remark}
+
+\section{Formal verification in Lean 4}\label{sec:lean}
+
+The theorems of this paper are also proved in the proof assistant Lean~4 (version 4.35.0-rc3), with the Mathlib library
+(commit \texttt{c55e6e78}); Table~\ref{tab:results} lists the formal theorems. A proof assistant checks every step of a
+proof against the rules of its logic, and the part of Lean that performs this check is its kernel. Two formal
+developments cover the paper. The first proves Theorem~\ref{thm:ml} from (V6), (Hcov) and (Bin)
+(Section~\ref{sec:lean-ml}). The second proves Theorems~\ref{thm:planar}--\ref{thm:phenom} from certificates that are
+checked exactly (Section~\ref{sec:lean-count}). Section~\ref{sec:lean-trust} states what has to be trusted, and
+Section~\ref{sec:lean-cost} the cost of the checks.
+
+\subsection{The certified threshold}\label{sec:lean-ml}
+
+\paragraph{What is modelled.} The development defines the planar code $\mathcal P_{d,w}$ of Section~\ref{sec:graphs}, with
+every edge, half-edges included, flipped independently with probability $p$, the class of an error (the parity of its
+half-edges at $b_1$), and the failure probability $\PML(\mathcal P_{d,w},p)$ of a decoder that maps each syndrome to a
+class of largest probability; every tie rule gives the same value. The auxiliary decoder of Section~\ref{sec:cert} is
+defined on every code size, with block side $L$ and window radius $R$, and $n_x=\max(5,\lceil w/L\rceil)$,
+$n_y=\lfloor (d-1)/L\rfloor$ as in Theorem~\ref{thm:ml}. The probabilities $\varepsilon_t$ that the reference blocks are
+bad are defined from the first stage of the decoder on a code of $5\times5$ blocks, as in Section~\ref{sec:conf}.
+
+\paragraph{What is proved.} Let the first stage have block side $L\ge2$ and window radius $R=L-1$ and satisfy (V6) and
+(Hcov) of Section~\ref{sec:conf}. If $\varepsilon_t\le5\times10^{-4}$ for each of the five types, then for every
+$p\le0.100$, every $w\ge1$ and every $d\ge32L+1$ the bound \eqref{eq:ml} holds, and for every $p\in[0,0.100]$ the
+optimal failure probability of the code with $w=d-1$ tends to $0$ as $d\to\infty$ (Lean: \texttt{theoremB\_a12\_main},
+\texttt{threshold\_a12\_main}). The proof bounds $\PML$ by the failure probability of the auxiliary decoder, using
+Lemma~\ref{lem:monoq} and Proposition~\ref{prop:monosize}, which are also proved in Lean. As explained in
+Section~\ref{sec:reduction}, Lean uses unit weights in the later stages of the auxiliary decoder, so the theorem has no
+hypothesis on them. The per-block hypothesis of the two-dimensional analysis follows from (V6), through the
+independence of blocks at block distance at least~$5$, from (Hcov), through the equality of the bad probabilities of
+blocks of the same type, and from the bounds on the $\varepsilon_t$. Both terms of \eqref{eq:ml} are proved with the
+constants shown, in the instance of Theorem~\ref{thm:cert} described after it.
+
+\paragraph{The confidence statement.} The experiment enters through (Bin). Under (V6), (Hcov) and (Bin), with $n=1.2\times
+10^{5}$ samples per type and acceptance when no type has more than $18$ bad samples, the probability that the experiment
+accepts while \eqref{eq:ml} is false is at most $10^{-9}$ (\texttt{theoremB\_certified}); for the registered experiment
+and the registered second experiment together, the probability that some experiment accepts while the bound fails for
+its block side is at most $2\times10^{-9}$ (\texttt{theoremB\_certified\_familywise}). Neither theorem assumes a bound
+on the $\varepsilon_t$. Lean also checks that the counts of Table~\ref{tab:cert-counts} satisfy the acceptance rule
+(\texttt{obs\_accept}); that each type satisfies $F(k;1.2\times10^{5},5\times10^{-4})\le2\times10^{-10}$ for the
+binomial lower tail $F$, so that each exact one-sided Clopper--Pearson upper bound at level $2\times10^{-10}$ is at most
+$5\times10^{-4}$ (\texttt{obs\_cp}); and that the rounded upper bounds of Table~\ref{tab:cert-counts} are valid and
+correctly rounded. Together these give Theorem~\ref{thm:ml}: the bound
+holds at $L=280$ with confidence $1-2\times10^{-9}$, under (V6), (Hcov) and (Bin).
+
+\paragraph{The hypotheses.} Table~\ref{tab:lean-ml-hyp} lists how each hypothesis of \texttt{theoremB\_certified} is
+discharged. (V6) and (Hcov) are properties of the registered program, which Lean cannot inspect; the evidence for them
+in Table~\ref{tab:lean-ml-hyp} is the validations at the registered geometry $R=L-1$ (Section~\ref{sec:cert-val}).
+(Bin) models the experiment, with the idealizations listed in Section~\ref{sec:conf}.
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{p{0.15\textwidth}p{0.30\textwidth}p{0.45\textwidth}}
+\toprule
+Hypothesis & Discharged by & Evidence \\
+\midrule
+$R=L-1$, $L\ge2$ & the registration & $L=280$, $R=279$ \\
+(V6) & validation V6 at $R=L-1$ & no mismatch in $1500$, $1500$ and $600$ decodes at $L=8$, $16$ and $24$, all five types \\
+(Hcov) & the window-local design; validations V2 and V4 at $R=L-1$ & V2: no mismatch in $10$ trials at each $L\in\{8,16,24\}$; V4: no mismatch in $1968$ block comparisons with full codes at $L=8$, $16$ and $24$ \\
+(Bin) & the registered experiment & fixed $n$, fresh seeds, every chunk counted; patches identified with the reference blocks by construction and V4 \\
+\bottomrule
+\end{tabular}
+\caption{The hypotheses of \texttt{theoremB\_certified} and how each is discharged.}
+\label{tab:lean-ml-hyp}
+\end{table}
+
+For the certificate under measurement errors of Section~\ref{sec:disc-meas}, Lean also checks that the accepted counts
+satisfy its acceptance rule and that each exact one-sided Clopper--Pearson upper bound at level $4\times10^{-11}$ is at
+most the bound $1.85\times10^{-5}$ that its deduction uses, the largest being $1.1706\times10^{-5}$ rounded up
+(\texttt{d1\_accept}, \texttt{d1\_cp}, \texttt{d1\_cp\_upper\_k4}, \texttt{d1\_cp\_tight\_k4}); this supports the
+remark there, while the deduction itself is not formalized.
+
+The arithmetic of the acceptance rule,
+$F(18;1.2\times10^{5},5\times10^{-4})\le2\times10^{-10}<F(19;1.2\times10^{5},5\times10^{-4})$, and the checks of the
+quoted upper bounds are evaluated by the kernel in exact integer arithmetic; no theorem of this development uses
+compiled evaluation (Section~\ref{sec:lean-trust}). The released development (see Code and data) has $65$ modules with
+about $17{,}000$ lines written by hand.
+\providecommand{\PML}{P_{\mathrm{ML}}}
+\providecommand{\PMW}{P_{\mathrm{MW}}}
+
+\subsection{The sampling-free bounds}\label{sec:lean-count}
+
+\paragraph{Statements.}
+The Lean statements of Theorems~\ref{thm:planar}--\ref{thm:phenom} concern the decoding graphs of Section~\ref{sec:graphs}, which are defined in Lean from their checks and edges.
+In Lean, $\mathcal P_{d,w}$ is the box $[0,d-1)\times[0,w)$ of checks with half-edges at the two ends of the first coordinate; the Lean statements write $n_x=d-1$ and $n_y=w$, so the exponent $n_x-10$ in Lean is the exponent $d-11$ of Theorem~\ref{thm:planar}.
+The phenomenological graph $\mathcal Q_{d,w,T}$ is the box $[0,T+1)\times[0,w)\times[0,d-1)$ with half-edges at the two ends of the last coordinate.
+The rotated code is defined by the positions of its $d^2$ qubits and of its $X$ checks, and the logical class of an error is the parity of its flips on the first column; a Lean lemma identifies its failure probability with that of the graph used in the proof.
+The toric code $\mathcal T_m$ has the checks $\mathbb Z_m^2$, and a correction fails when $E\oplus C$ crosses one of the two seams of the torus an odd number of times.
+In Lean, $\PMW$ is the probability that some correction of least size fails, and $\PML$ is the least failure probability of a map from syndromes to logical classes; a randomized decoder is a mixture of such maps, so it does no better.
+Each theorem has a version for $\PMW$ and one for $\PML$ (Lean names ending in \texttt{\_ML}); the second follows from the first and $\PML\le\PMW$.
+The constants and rates are those of Section~\ref{sec:results}, entered as exact rationals, for example $398.91=39891/100$ and $0.998=499/500$.
+The statements have no hypotheses beyond the ranges of $p$ and of the size.
+Two steps are not formalized: the identification of one error sector of the planar, toric and phenomenological codes with their decoding graphs, and the symmetry that carries the planar bound to the other sector of a square code (Section~\ref{sec:graphs}).
+
+\paragraph{The general argument.}
+Each proof consists of a general argument, proved once for each family of graphs, and a finite check of a certificate.
+The general argument has four parts: the probability estimates (independence of the edges, the union bound over failure paths, and the change of measure from $p_\ast$ to $p$), a decoder lemma, a counting lemma, and the soundness of the checks.
+The decoder lemma states that if some correction of least size fails, then a failing correction of least size with the least value of the tie-breaking potential $\Phi$ exists; $E\oplus C$ then contains a path between the two boundaries (for the toric code, a cycle that is not null-homologous), and no window of this path can be replaced by a witness that passes the check, which covers the exclusion rules of Section~\ref{sec:count} in one statement.
+The counting lemma turns the row inequalities of a potential into a bound on the weighted number of legal labelled walks of each length.
+The soundness theorems derive the hypotheses of the counting lemma from the Boolean checks of a certificate.
+For the rotated code the walk carries its height below the top side while it is near that side, and for the toric code its offset from the seam of $\Phi$ while it is near the seam; a translation lemma shows that the checks of states far from the seam do not depend on the offset, so the far states are checked at a single offset.
+
+\paragraph{Certificates.}
+A certificate lists the states of the walk, that is, its last $K$ steps with their labels (for the rotated and the toric code also the height or the offset near the boundary or the seam), gives each state a positive integer potential, and fixes $p_\ast$, $\lambda$ and the constant of the bound.
+The check functions verify, for every listed state, that the weighted sum of the potentials of its legal successors is at most $\lambda$ times its own potential and that every successor that is not listed ends in an excluded window; they verify that every legal start of a walk is listed or excluded, and they bound the start sum by the stated constant.
+An excluded window counts only if a witness for it passes the witness check. Hence neither the search that finds the witnesses nor the certificate files need to be trusted: a wrong value can only make a check fail.
+Tables~\ref{cnt:tab-cert} and~\ref{phen:tab} give the sizes of the certificates.
+
+\paragraph{Compiled evaluation and the kernel.}
+A generator turns the certificate files into Lean data modules and writes the sha256 of each input file into the module.
+The checks are then evaluated in one of two ways.
+With compiled evaluation, the check functions are compiled to machine code and run through \texttt{native\_decide}; each call adds one axiom, which \texttt{\#print axioms} lists, and the compiler and the runtime join the trusted base.
+On the kernel route, the certificate is a binary search tree whose nodes hold a state, its potential and the successors that the certificate claims to be excluded; the check functions recurse on this tree, and every check is reduced by the kernel (\texttt{decide +kernel}), which adds no axiom.
+The checks are split into pieces of moderate size (ranges of rows or subtrees, and prefixes of the start walks), each piece is a separate theorem, and lemmas proved once combine the pieces.
+The planar, the rotated, the phenomenological and the two toric bounds are proved in both ways from the same certificates, with identical statements (\texttt{planar\_A} and \texttt{planar\_A10\_kernel}, \texttt{rotated\_B} and \texttt{rotated\_B\_kernel}, \texttt{phenom\_D2} and \texttt{phenom\_D2M8\_kernel}, \texttt{toric\_A'\_10} and \texttt{toric\_A'\_10\_kernel} at $0.046$, \texttt{toric\_A'} and \texttt{toric\_A'\_kernel} at $0.045$; Table~\ref{tab:results}).
+The Lean sources also contain kernel-checked bounds from two smaller certificates, for the planar code at $p\le0.045$ with $d\ge9$ and for the phenomenological graph at $p\le0.0155$ with $d\ge7$ (\texttt{planar\_A8\_kernel} and \texttt{phenom\_D2\_kernel}, with $157{,}618$ and $72{,}294$ states).
+Table~\ref{tab:lean-build} lists how many such axioms each compiled-evaluation theorem uses besides the standard ones (Section~\ref{sec:lean-trust}).
+
+\paragraph{Reproduction.}
+The data modules can be regenerated from the certificate files, whose sha256 they record; the reproduction manifest lists the input files of each theorem with their hashes.
+For the kernel certificates these include the transition or hint files, from which the generator reads the windows that the certificate claims to be excluded.
+
+\subsection{What has to be trusted}\label{sec:lean-trust}
+
+Lean reports, for every theorem, the axioms it depends on. The trusted base is Lean's kernel, including its built-in
+arithmetic on natural numbers, together with three standard axioms of Lean's foundations: propositional
+extensionality, the axiom of choice and the soundness of quotients. The theorems of Section~\ref{sec:lean-ml} and the
+kernel-route theorems of Section~\ref{sec:lean-count} depend on nothing else. The theorems marked ``compiled
+evaluation'' in Table~\ref{tab:results} also depend on one axiom for each large certificate check: Lean evaluates the
+check, a Boolean test, with compiled code and records its outcome \texttt{true} as an axiom that names the test.
+Beyond the kernel, they rely on Lean's compiler and runtime, on the C compiler that
+builds the precompiled modules, and on these modules having been built from the checked sources. Programs outside Lean
+generate the certificate data, and the searches for exclusion witnesses are Lean functions; neither needs to be trusted
+(Section~\ref{sec:lean-count}).
+
+\subsection{Cost}\label{sec:lean-cost}
+
+Table~\ref{tab:lean-build} lists the measured cost of the formal checks. Every module runs as a separate Lean process on
+one core of a server processor, and the modules are independent of each other. Elaborating the $65$ modules of
+the certified-threshold development takes $365$\,s of elapsed time on one core in total, and no process uses more than
+$7.3$\,GB of memory, most of it memory-mapped library files.
+Elaborating the Lean sources of the general argument and of the check functions (53 modules, Mathlib not counted) takes 4.7 minutes of processor time on one core, with at most 2.8~GB of memory, and each theorem file then takes less than half a minute.
+With compiled evaluation a certificate check takes between $0.35$ and $17.4$ core-hours, and on the kernel route between $226$ and $15{,}236$ core-hours in $5{,}205$ to $97{,}435$ modules (Table~\ref{tab:lean-build}).
+The near states of the rotated certificate and of the toric certificate at $0.046$, together with one copy of their far system, are $22$ and $41$ times as many as the states of the planar certificate.
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{p{0.29\textwidth}p{0.29\textwidth}p{0.08\textwidth}p{0.13\textwidth}r}
+\toprule
+Modules & Theorems & Axioms & Time & Memory \\
+\midrule
+\multicolumn{5}{l}{\emph{Certified threshold}} \\
+\texttt{TwoD.HeadlineMain} & \texttt{theoremB\_a12\_main}, \texttt{threshold\_a12\_main} & 3 & 4.3\,s & 6.8\,GB \\
+\texttt{TwoD.HeadlineCert} & \texttt{theoremB\_certified}, \texttt{theoremB\_certified\_\allowbreak familywise} & 3 & 5.0\,s & 6.8\,GB \\
+\texttt{TwoD.CertObserved} & \texttt{obs\_accept}, \texttt{obs\_cp}, the quoted upper bounds & 3 & 4.7\,s & 6.9\,GB \\
+all $65$ modules & & 3 & 365\,s & 7.3\,GB \\
+\midrule
+\multicolumn{5}{l}{\emph{Sampling-free bounds}} \\
+general argument and check functions ($53$ modules) & all of the following & 3 & 281\,s & 2.8\,GB \\
+planar $0.0465$, compiled: $73$ modules & \texttt{planar\_A}, \texttt{planar\_A\_ML} & $3+74$ & 0.35\,core-h & 2.7\,GB \\
+planar $0.0465$, kernel: $6{,}226$ modules & \texttt{planar\_A10\_kernel}, \texttt{planar\_A10\_kernel\_ML} & 3 & 281\,core-h & 37.9\,GB \\
+rotated $0.0465$, compiled: $251$ modules & \texttt{rotated\_B}, \texttt{rotated\_B\_ML} & $3+252$ & 13.9\,core-h & 5.7\,GB \\
+rotated $0.0465$, kernel: $52{,}051$ modules & \texttt{rotated\_B\_kernel}, \texttt{rotated\_B\_kernel\_ML} & 3 & 7{,}267\,core-h & 43.4\,GB \\
+toric $0.046$, compiled: $417$ modules & \texttt{toric\_A'\_10}, \texttt{toric\_A'\_10\_ML} & $3+418$ & 17.4\,core-h & 11.0\,GB \\
+toric $0.046$, kernel: $97{,}435$ modules & \texttt{toric\_A'\_10\_kernel}, \texttt{toric\_A'\_10\_kernel\_ML} & 3 & 15{,}236\,core-h & 62.0\,GB \\
+toric $0.045$, compiled: $106$ modules & \texttt{toric\_A'}, \texttt{toric\_A'\_ML} & $3+107$ & 0.36\,core-h & 2.7\,GB \\
+toric $0.045$, kernel: $5{,}205$ modules & \texttt{toric\_A'\_kernel}, \texttt{toric\_A'\_kernel\_ML} & 3 & 226\,core-h & 20.5\,GB \\
+phenomenological $0.016$, compiled: $109$ modules & \texttt{phenom\_D2}, \texttt{phenom\_D2\_ML} & $3+110$ & 0.46\,core-h & 2.7\,GB \\
+phenomenological $0.016$, kernel: $5{,}988$ modules & \texttt{phenom\_D2M8\_kernel}, \texttt{phenom\_D2M8\_kernel\_ML} & 3 & 313\,core-h & 18.0\,GB \\
+\bottomrule
+\end{tabular}
+\caption{Cost of the formal checks. Time: for the modules of the certified threshold, the elapsed time on one core of
+elaborating each module, including about $3.5$\,s of loading its imports, and the sum over the modules; for the
+general argument, the processor time of elaborating its modules; for the certificates, the sum of the elapsed times
+of their check modules, each run on one core. Memory: the largest resident memory of one process (for the
+certificates, of their check, assembly and theorem processes), in GB ($10^9$ bytes, rounded up), including
+memory-mapped library files. Axioms: $3$ means the three standard axioms of
+Section~\ref{sec:lean-trust} only, and $3+n$ these and $n$ axioms recorded by compiled evaluation.}
+\label{tab:lean-build}
+\end{table}
+
+\section{Discussion}\label{sec:discussion}
+
+\subsection{Monotone arguments}
+Call an error set \emph{failing} for minimum-weight matching if some minimum-weight correction of it fails. An event is \emph{increasing} if it is preserved when errors are added. The argument of \cite{DKLP02}, the bounds of Sections~\ref{sec:count} and~\ref{sec:phenom}, and every bound obtained by counting paths, clusters or witnesses with a union bound, bound the failure probability by the probability of an increasing event that contains the failing sets. Every such event contains the event $U$ that some subset of the error is failing, and $U$ is itself increasing, so no such bound is smaller than $\Pr(U)$. For the planar code at $p=0.093$, Monte Carlo estimates of $\Pr(U)$, with $U$ decided by integer programming, grow from $0.264$ at $d=7$ to at least $0.357$ at $d=19$, while the failure probability of matching itself does not grow. These estimates are not rigorous, and the behaviour for large $d$ is an extrapolation, but they indicate that arguments of this kind cannot prove a threshold for matching above $0.093$, and in particular that the counting bounds cannot be pushed to the numerical threshold $0.1031$ of matching. The certificate of Theorem~\ref{thm:ml} is not of this kind: a block is bad when window solutions leave a defect or a long residual path, and adding errors can remove both.
+
+Within the counting method, the value of $p$ at which the growth rate of the labelled walks reaches one increases only slowly with the length of the windows that the exclusion rules inspect, from about $0.042$ for windows of four edges to about $0.047$ for windows of eleven edges (Table~\ref{cnt:tab-growth}; floating-point estimates, not part of any proof). We do not know how to go well beyond $0.05$ without sampling. A natural next step would also use the correction away from the crossing, but that is a non-local function of the error.
+
+\subsection{Statistical certification}
+Theorem~\ref{thm:ml} is a theorem about unknown numbers, the five bad-block probabilities, combined with a registered experiment that bounds them. Its confidence statement concerns the sampling only: it bounds the probability that the experiment accepts while the bound is false, under the binomial model, and it does not depend on any prior on the unknown numbers. The conditions of Section~\ref{sec:conf} are not proved. The properties (V6) and (Hcov) of the program were tested on all five block types (Section~\ref{sec:cert-val}), but tests of a program are not proofs about it; (Bin) idealizes the sampling as described in Section~\ref{sec:conf}; and the identification of the code with its decoding graph is not formalized. Everything else is proved and checked in Lean: the deterministic lemma, the bound on the failure probability in terms of the bad-block probabilities, the reduction from the auxiliary decoder to ML decoding, and the arithmetic of the acceptance rule. The registration fixed the program, the seeds, the acceptance rule and the analysis before the run (Section~\ref{sec:cert-exp}). Anyone can recompute the counts from the archived records, and a new run with fresh seeds would be an independent test of the same statement.
+
+A deterministic proof at $p=0.100$ would need the bad-block probabilities themselves, which are probabilities of events depending on about $4\times10^{6}$ independent bits, or a criterion whose inputs can be computed exactly. Theorem~\ref{thm:single} is such a criterion, but its inputs need exact posterior samples and partition functions with certified numerics on windows of side near $10^3$ (Remark~\ref{rem:single-status}).
+
+\subsection{Beyond \texorpdfstring{$p=0.100$}{p = 0.100}}
+The certified decoder uses exact window posteriors for its weights. With matching weights instead, the bad-block probability at $p=0.10$ stayed at several per cent in pilot runs even for blocks of side $256$ and windows of radius $320$, because the residual loops of matching approach the block size near the matching threshold. Posterior weights remove this obstacle, but the window side needed to make bad blocks rare still grows as $p$ approaches the Nishimori point, and the cost of computing exact window marginals grows like the cube of the window side. We did not attempt a certificate above $p=0.100$.
+
+\subsection{Measurement errors}\label{sec:disc-meas}
+The method of Theorem~\ref{thm:ml} also applies under measurement errors. For the phenomenological model of Theorem~\ref{thm:phenom} at $p=0.02$, a pre-registered certificate of the same kind, for a windowed decoder with blocks of side $35$ in space and time, was accepted. With its deduction, it gives an optimal threshold of at least $0.02$ for this model, with confidence $1-10^{-9}$ under the analogues of (V6), (Hcov) and (Bin) for its three-dimensional first stage. This is not a result of this paper in the sense of Section~\ref{sec:setting}, whose theorems are all checked in Lean; Theorem~\ref{thm:phenom} gives $0.016$ for every minimum-weight decoder.
+
+\subsection{Open problems}
+\begin{enumerate}[label=(\arabic*),leftmargin=2em]
+\item A deterministic proof that the optimal threshold of the surface code exceeds $0.05$, for instance by certifying the criterion of Theorem~\ref{thm:single} with exact arithmetic.
+\item A rigorous threshold for minimum-weight matching above $0.0465$. By the discussion above, such a proof cannot rest on an increasing event alone near the numerical threshold of matching.
+\item Certified bounds under measurement errors that approach the numerical thresholds, and bounds for circuit-level noise beyond the matching thresholds proved so far.
+\end{enumerate}
+
+\section*{Code and data}
+The material behind this paper is archived in three parts, each with a file listing the SHA-256 checksums of its files:
+\begin{itemize}[leftmargin=2em]
+\item the Lean development of Theorem~\ref{thm:ml}: record \href{https://doi.org/10.5281/zenodo.23725567}{10.5281/zenodo.23725567}; SHA-256 of its checksum file:\\ \texttt{a01c56a11a56e94b91195414d779dfbe9e4a3507eef6aec88ed5357b12c73ccd};
+\item the Lean development of Theorems~\ref{thm:planar}--\ref{thm:phenom}: record \href{https://doi.org/10.5281/zenodo.23725567}{10.5281/zenodo.23725567}; SHA-256 of its checksum file:\\ \texttt{76f02636f65959e936d2aae8cc75f700ae6b78b809e534bffbb4848278be31cd};
+\item the registrations with their timestamp proofs, the programs, the certificate data, the outputs of all checks and Supplement~S1: record \href{https://doi.org/10.5281/zenodo.23725565}{10.5281/zenodo.23725565}; SHA-256 of its checksum file:\\ \texttt{e2c2b3413f6f0123b792b0e7f2096c6f04443142b5f017376a5157887e942f21}.
+\end{itemize}
+Host names, local paths, internal names and other details of the computing setup in the archived records were normalized for release; the archive lists every normalized file with its SHA-256 as written and as released, and the files as written are available from the author on request. The records are released under CC BY 4.0, with the Lean sources and the programs under Apache-2.0. The full proof of Theorem~\ref{thm:cert} in its general form is in Supplement~S1.
+
+\bibliographystyle{amsplain}
+\providecommand{\bysame}{\leavevmode\hbox to3em{\hrulefill}\thinspace}
+\providecommand{\MR}{\relax\ifhmode\unskip\space\fi MR }
+% \MRhref is called by the amsart/book/proc definition of \MR.
+\providecommand{\MRhref}[2]{%
+  \href{http://www.ams.org/mathscinet-getitem?mr=#1}{#2}
+}
+\providecommand{\href}[2]{#2}
+\begin{thebibliography}{10}
+
+\bibitem{AH04}
+C.~Amoruso and A.~K. Hartmann, \emph{Domain-wall energies and magnetization of
+  the two-dimensional random-bond {I}sing model}, Phys. Rev. B \textbf{70}
+  (2004), 134425.
+
+\bibitem{BBW05}
+Paul Balister, B{\'e}la Bollob{\'a}s, and Mark Walters, \emph{Continuum
+  percolation with steps in the square or the disc}, Random Structures
+  Algorithms \textbf{26} (2005), 392--403.
+
+\bibitem{BH11}
+Sergey Bravyi and Jeongwan Haah, \emph{Analytic and numerical demonstration of
+  quantum self-correction in the {3D} {C}ubic {C}ode}, 2011, arXiv:1112.3252.
+
+\bibitem{CP34}
+C.~J. Clopper and E.~S. Pearson, \emph{The use of confidence or fiducial limits
+  illustrated in the case of the binomial}, Biometrika \textbf{26} (1934),
+  404--413.
+
+\bibitem{Cou22}
+Olivier Couronn{\'e}, \emph{New upper bound for the connective constant for
+  square-lattice self-avoiding walks}, 2022, arXiv:2211.16146.
+
+\bibitem{dMU21}
+Leonardo de~Moura and Sebastian Ullrich, \emph{The {L}ean 4 theorem prover and
+  programming language}, Automated Deduction -- {CADE} 28, Lecture Notes in
+  Comput. Sci., Springer, 2021, pp.~625--635.
+
+\bibitem{DKLP02}
+Eric Dennis, Alexei Kitaev, Andrew Landahl, and John Preskill,
+  \emph{Topological quantum memory}, J. Math. Phys. \textbf{43} (2002),
+  4452--4505.
+
+\bibitem{DKP15}
+Ilya Dumer, Alexey~A. Kovalev, and Leonid~P. Pryadko, \emph{Thresholds for
+  correcting errors, erasures, and faulty syndrome measurements in degenerate
+  quantum codes}, Phys. Rev. Lett. \textbf{115} (2015), 050502.
+
+\bibitem{Edm65}
+Jack Edmonds, \emph{Paths, trees, and flowers}, Canad. J. Math. \textbf{17}
+  (1965), 449--467.
+
+\bibitem{Fis61}
+Michael~E. Fisher, \emph{Statistical mechanics of dimers on a plane lattice},
+  Phys. Rev. \textbf{124} (1961), 1664--1672.
+
+\bibitem{Fow12}
+Austin~G. Fowler, \emph{Proof of finite surface code threshold for matching},
+  Phys. Rev. Lett. \textbf{109} (2012), 180502.
+
+\bibitem{GS22}
+Christophe Garban and Thomas Spencer, \emph{Continuous symmetry breaking along
+  the {N}ishimori line}, J. Math. Phys. \textbf{63} (2022), 093302.
+
+\bibitem{Geo73}
+Alan George, \emph{Nested dissection of a regular finite element mesh}, SIAM J.
+  Numer. Anal. \textbf{10} (1973), no.~2, 345--363.
+
+\bibitem{Hig22}
+Oscar Higgott, \emph{{PyMatching}: a {P}ython package for decoding quantum
+  codes with minimum-weight perfect matching}, ACM Trans. Quantum Comput.
+  \textbf{3} (2022), no.~3, 1--16.
+
+\bibitem{HG25}
+Oscar Higgott and Craig Gidney, \emph{Sparse {B}lossom: correcting a million
+  errors per core second with minimum-weight matching}, Quantum \textbf{9}
+  (2025), 1600.
+
+\bibitem{HM82}
+T.~Horiguchi and T.~Morita, \emph{Existence of the ferromagnetic phase in a
+  random-bond {I}sing model on the square lattice}, J. Phys. A \textbf{15}
+  (1982), L75--L80.
+
+\bibitem{KW52}
+M.~Kac and J.~C. Ward, \emph{A combinatorial solution of the two-dimensional
+  {I}sing model}, Phys. Rev. \textbf{88} (1952), 1332--1337.
+
+\bibitem{Kas61}
+P.~W. Kasteleyn, \emph{The statistics of dimers on a lattice}, Physica
+  \textbf{27} (1961), 1209--1225.
+
+\bibitem{KM26}
+Sun Woo~P. Kim and Max McGinley, \emph{Mixed-state topological order and
+  error-correction thresholds in non-{A}belian codes: rigorous results}, 2026,
+  arXiv:2607.21706.
+
+\bibitem{Kit03}
+A.~Yu. Kitaev, \emph{Fault-tolerant quantum computation by anyons}, Ann.
+  Physics \textbf{303} (2003), 2--30.
+
+\bibitem{KP13}
+Alexey~A. Kovalev and Leonid~P. Pryadko, \emph{Fault tolerance of quantum
+  low-density parity check codes with sublinear distance scaling}, Phys. Rev. A
+  \textbf{87} (2013), 020304(R).
+
+\bibitem{KuP19}
+Aleksander Kubica and John Preskill, \emph{Cellular-automaton decoders with
+  provable thresholds for topological codes}, Phys. Rev. Lett. \textbf{123}
+  (2019), 020501.
+
+\bibitem{LLYCE09}
+Lin Lin, Jianfeng Lu, Lexing Ying, Roberto Car, and Weinan E, \emph{Fast
+  algorithm for extracting the diagonal of the inverse matrix with application
+  to the electronic structure analysis of metallic systems}, Commun. Math. Sci.
+  \textbf{7} (2009), no.~3, 755--777.
+
+\bibitem{LYMLYE11}
+Lin Lin, Chao Yang, Juan~C. Meza, Jianfeng Lu, Lexing Ying, and Weinan E,
+  \emph{{SelInv}---an algorithm for selected inversion of a sparse symmetric
+  matrix}, ACM Trans. Math. Software \textbf{37} (2011), no.~4, 1--19.
+
+\bibitem{Nis81}
+H.~Nishimori, \emph{Internal energy, specific heat and correlation function of
+  the bond-random {I}sing model}, Progr. Theoret. Phys. \textbf{66} (1981),
+  1169--1181.
+
+\bibitem{OAIM04}
+Takuya Ohno, Gaku Arakawa, Ikuo Ichinose, and Tetsuo Matsui, \emph{Phase
+  structure of the random-plaquette ${Z}_2$ gauge model: accuracy threshold for
+  a toric quantum memory}, Nuclear Phys. B \textbf{697} (2004), 462--480.
+
+\bibitem{OO26}
+Manaka Okuyama and Masayuki Ohzeki, \emph{Existence of a phase transition in
+  the one-dimensional {I}sing spin glass model with long-range interactions on
+  the {N}ishimori line}, J. Phys. A \textbf{59} (2026), 305204.
+
+\bibitem{PPV09}
+Francesco Parisen~Toldin, Andrea Pelissetto, and Ettore Vicari,
+  \emph{Strong-disorder paramagnetic-ferromagnetic fixed point in the
+  square-lattice {$\pm J$} {I}sing model}, J. Statist. Phys. \textbf{135}
+  (2009), 1039--1061.
+
+\bibitem{Pei26}
+Yan~Ru Pei, \emph{Vertical and reentrant ferromagnetic boundaries below the
+  {N}ishimori point}, 2026, arXiv:2609.37479.
+
+\bibitem{PT00}
+Andr{\'e} P{\"o}nitz and Peter Tittmann, \emph{Improved upper bounds for
+  self-avoiding walks in $\mathbb{Z}^d$}, Electron. J. Combin. \textbf{7}
+  (2000), R21.
+
+\bibitem{RW07}
+Oliver Riordan and Mark Walters, \emph{Rigorous confidence intervals for
+  critical probabilities}, Phys. Rev. E \textbf{76} (2007), 011110.
+
+\bibitem{mathlib20}
+{The mathlib Community}, \emph{The {L}ean mathematical library}, Proceedings of
+  the 9th {ACM} {SIGPLAN} International Conference on Certified Programs and
+  Proofs, ACM, 2020, pp.~367--381.
+
+\bibitem{Tom26}
+Tejasvi~Singh Tomar, \emph{A matching threshold of $2\times10^{-3}$ for the
+  rotated surface code under circuit-level noise}, Zenodo, 2026,
+  \url{https://doi.org/10.5281/zenodo.23498520}.
+
+\bibitem{WHP03}
+Chenyang Wang, Jim Harrington, and John Preskill, \emph{Confinement-{H}iggs
+  transition in a disordered gauge theory and the accuracy threshold for
+  quantum memory}, Ann. Physics \textbf{303} (2003), 31--58.
+
+\bibitem{YLY26}
+Satoshi Yoshida, Ethan Lake, and Hayata Yamasaki, \emph{Proof of a finite
+  threshold for the union-find decoder}, 2026, arXiv:2602.20238.
+
+\end{thebibliography}
+
+\end{document}

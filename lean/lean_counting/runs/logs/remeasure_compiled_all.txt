@@ -1,0 +1,7 @@
+# compiled-route All modules: elaboration time and peak resident memory (lake env lean QEC/Checks/<c>/All.lean under scripts/chk.sh, one core; GNU time %e %M); measured 2026-10-27T00:42Z
+QEC/Checks/A10/All.lean 16.46 s 2571156 KB
+QEC/Checks/R10/All.lean 6.26 s 1932132 KB
+QEC/Checks/T10/All.lean 16.49 s 2055980 KB
+QEC/Checks/T8/All.lean 6.25 s 1865044 KB
+QEC/Checks/D2/All.lean 6.25 s 2583712 KB
+# R10: run with AS_KB=300000000 (address-space limit 300 GB; the R10 data oleans are mapped, and under the default 100 GB limit thread creation fails). The others ran under the default limit.

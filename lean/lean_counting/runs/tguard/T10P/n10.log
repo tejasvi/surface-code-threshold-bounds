@@ -1,0 +1,8 @@
+20:41:00 start unit=job-t10h stop=6900 tmax=7200
+22:31:44 start unit=job-t10h stop=6900 tmax=7200
+23:02:18 held E27_108: lean 372432 at 6907 s, timeout 372431 stopped
+23:02:54 held E27_108: lean 372432 at 6943 s, timeout 372431 stopped
+23:03:45 released E27_108: lean state Z status 0, timeout at 6994 s
+23:04:20 released E27_108: lean state gone status ?, timeout at ? s
+23:31:56 unit inactive, nothing held: exit
+23:32:00 unit inactive, nothing held: exit

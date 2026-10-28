@@ -1,0 +1,6 @@
+
+Note on remeasure_thm.txt: the native_axioms field of its first four lines (PlanarA8K, PhenomK, Planar, Phenom) was
+computed with an earlier search pattern that matched only the common suffix of the axiom names (so it shows 0 or 1);
+the script was corrected before the last three lines. The axiom counts are those of axioms_<THM>.out (count the
+distinct names *._native.native_decide.ax_*): 0, 0, 74, 110, 252, 107, 418 for PlanarA8K, PhenomK, Planar, Phenom,
+RotatedB, Toric, Toric10.

@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: "Please cite the paper given under preferred-citation."
+title: "Data, programs and Lean proofs for: Certified lower bounds on the optimal-decoding threshold of the surface code"
+authors:
+  - given-names: "Tejasvi Singh"
+    family-names: "Tomar"
+    orcid: "https://orcid.org/0000-0003-4668-3639"
+license:
+  - CC-BY-4.0
+  - Apache-2.0
+repository-code: "https://github.com/tejasvi/surface-code-threshold-bounds"
+keywords:
+  - quantum error correction
+  - surface code
+  - toric code
+  - threshold
+  - maximum-likelihood decoding
+  - minimum-weight matching
+  - statistical certificate
+  - computer-assisted proof
+  - Lean
+preferred-citation:
+  type: article
+  title: "Certified lower bounds on the optimal-decoding threshold of the surface code"
+  authors:
+    - given-names: "Tejasvi Singh"
+      family-names: "Tomar"
+      orcid: "https://orcid.org/0000-0003-4668-3639"
+  year: 2026
+  month: 10

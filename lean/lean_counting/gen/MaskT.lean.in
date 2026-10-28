@@ -1,0 +1,45 @@
+import QECCountComp.KernT
+import QECCountComp.Data.@NAME@
+
+/-!
+# Exclusion hints of the seam certificate @NAME@ (untrusted generator, run with compiled evaluation)
+
+For the near entries `LO ≤ i < HI` (`KIND = near`) or the bulk entries (`KIND = bulk`) of @NAME@: the mask of the
+candidate steps whose listed successor is excluded by `exclWinTK` (the kernel route's own search and check), one line
+per entry; bulk lines pack the masks at the offsets `bigO`, `HC`, `-HC - 1` as `m₀ + 256 m₁ + 65536 m₂`. Written to
+`OUT`. The kernel checks every claimed exclusion again, so these hints need not be trusted.
+-/
+
+open QECComp QECComp.Data
+
+def maskAtT (P : ParamsT) (nk nG bk bH : Array Nat) (s : List (Nat × Bool)) (o : Int) : Nat :=
+  ((candList 2).zip (List.range 8)).foldl (fun m xi =>
+    let u := s ++ [xi.1]
+    if !selfAvoid 2 u then m
+    else match potT P nk nG bk bH u.tail (o + xdisp [xi.1]) with
+      | some _ => if exclWinTK P (o - xdisp s) u then m + 2 ^ xi.2 else m
+      | none => m) 0
+
+def maskLine (kind : String) (i : Nat) : Nat :=
+  let P := P@NAME@
+  if kind == "near" then
+    let k := nk@NAME@[i]!
+    maskAtT P nk@NAME@ nG@NAME@ bk@NAME@ bH@NAME@ (decodeKey 2 P.K (k / 4096)) ((k % 4096 : Nat) - 2048 : Int)
+  else
+    let s := decodeKey 2 P.K bk@NAME@[i]!
+    maskAtT P nk@NAME@ nG@NAME@ bk@NAME@ bH@NAME@ s bigO +
+      256 * maskAtT P nk@NAME@ nG@NAME@ bk@NAME@ bH@NAME@ s P.HC +
+      65536 * maskAtT P nk@NAME@ nG@NAME@ bk@NAME@ bH@NAME@ s (-(P.HC : Int) - 1)
+
+def runMasks : IO Unit := do
+  let kind := (← IO.getEnv "KIND").getD "near"
+  let lo := ((← IO.getEnv "LO").getD "0").toNat!
+  let hi0 := ((← IO.getEnv "HI").getD "0").toNat!
+  let out := (← IO.getEnv "OUT").getD "masks.txt"
+  let n := if kind == "near" then nk@NAME@.size else bk@NAME@.size
+  let hi := min hi0 n
+  let ls := (List.range' lo (hi - lo)).map (fun i => toString (maskLine kind i))
+  IO.FS.writeFile out (String.intercalate "\n" ls ++ "\n")
+  IO.println s!"{kind} {lo} {hi} of {n}"
+
+#eval runMasks

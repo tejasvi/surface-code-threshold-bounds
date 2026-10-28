@@ -1,0 +1,34 @@
+# #print axioms of every final theorem. rerun: the release's theorem file elaborated against the development
+# build (old and scrubbed outputs identical, including the type and value hashes of each theorem); record:
+# the axioms output of the build of the certificate's check modules (the check oleans are on the build machines).
+source	file	theorem	axioms	from
+rerun	QEC/Thm/PlanarA6.lean	QEC.planar_A6	3 standard + 14 native_decide	PlanarA6.new.out
+rerun	QEC/Thm/PlanarA6.lean	QEC.planar_A6_ML	3 standard + 14 native_decide	PlanarA6.new.out
+rerun	QEC/Thm/Planar.lean	QEC.planar_A	3 standard + 74 native_decide	Planar.new.out
+rerun	QEC/Thm/Planar.lean	QEC.planar_A_ML	3 standard + 74 native_decide	Planar.new.out
+rerun	QEC/Thm/Phenom.lean	QEC.phenom_D2	3 standard + 110 native_decide	Phenom.new.out
+rerun	QEC/Thm/Phenom.lean	QEC.phenom_D2_ML	3 standard + 110 native_decide	Phenom.new.out
+rerun	QEC/Thm/Rotated.lean	QEC.rotated_S10	3 standard + 82 native_decide	Rotated.new.out
+rerun	QEC/Thm/Rotated.lean	QEC.rotated_S10_ML	3 standard + 82 native_decide	Rotated.new.out
+rerun	QEC/Thm/Toric.lean	QEC.toric_A'	3 standard + 107 native_decide	Toric.new.out
+rerun	QEC/Thm/Toric.lean	QEC.toric_A'_ML	3 standard + 107 native_decide	Toric.new.out
+rerun	QEC/Thm/Toric10.lean	QEC.toric_A'_10	3 standard + 418 native_decide	Toric10.new.out
+rerun	QEC/Thm/Toric10.lean	QEC.toric_A'_10_ML	3 standard + 418 native_decide	Toric10.new.out
+rerun	QEC/Thm/RotatedB.lean	QEC.rotated_B	3 standard + 252 native_decide	RotatedB.new.out
+rerun	QEC/Thm/RotatedB.lean	QEC.rotated_B_ML	3 standard + 252 native_decide	RotatedB.new.out
+rerun	QEC/Thm/PlanarA6K.lean	QEC.planar_A6_kernel	3 standard + 0 native_decide	PlanarA6K.new.out
+rerun	QEC/Thm/PlanarA6K.lean	QEC.planar_A6_kernel_ML	3 standard + 0 native_decide	PlanarA6K.new.out
+rerun	QEC/Thm/PlanarA8K.lean	QEC.planar_A8_kernel	3 standard + 0 native_decide	PlanarA8K.new.out
+rerun	QEC/Thm/PlanarA8K.lean	QEC.planar_A8_kernel_ML	3 standard + 0 native_decide	PlanarA8K.new.out
+rerun	QEC/Thm/PhenomK.lean	QEC.phenom_D2_kernel	3 standard + 0 native_decide	PhenomK.new.out
+rerun	QEC/Thm/PhenomK.lean	QEC.phenom_D2_kernel_ML	3 standard + 0 native_decide	PhenomK.new.out
+record	QEC/Thm/PlanarK10.lean	QEC.planar_A10_kernel	3 standard + 0 native_decide	runs/logs/axioms_PlanarK10.out
+record	QEC/Thm/PlanarK10.lean	QEC.planar_A10_kernel_ML	3 standard + 0 native_decide	runs/logs/axioms_PlanarK10.out
+record	QEC/Thm/PhenomK8.lean	QEC.phenom_D2M8_kernel	3 standard + 0 native_decide	runs/logs/axioms_PhenomK8.out
+record	QEC/Thm/PhenomK8.lean	QEC.phenom_D2M8_kernel_ML	3 standard + 0 native_decide	runs/logs/axioms_PhenomK8.out
+record	QEC/Thm/ToricK.lean	QEC.toric_A'_kernel	3 standard + 0 native_decide	runs/logs/axioms_ToricK.out
+record	QEC/Thm/ToricK.lean	QEC.toric_A'_kernel_ML	3 standard + 0 native_decide	runs/logs/axioms_ToricK.out
+record	QEC/Thm/RotatedBK.lean	QEC.rotated_B_kernel	3 standard + 0 native_decide	runs/logs/axioms_RotatedBK.rebuild.out
+record	QEC/Thm/RotatedBK.lean	QEC.rotated_B_kernel_ML	3 standard + 0 native_decide	runs/logs/axioms_RotatedBK.rebuild.out
+record	QEC/Thm/ToricK10.lean	QEC.toric_A'_10_kernel	3 standard + 0 native_decide	runs/logs/axioms_ToricK10.out
+record	QEC/Thm/ToricK10.lean	QEC.toric_A'_10_kernel_ML	3 standard + 0 native_decide	runs/logs/axioms_ToricK10.out

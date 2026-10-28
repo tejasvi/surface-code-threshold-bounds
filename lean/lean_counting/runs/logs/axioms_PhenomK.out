@@ -1,0 +1,2 @@
+'QEC.phenom_D2_kernel' depends on axioms: [propext, Classical.choice, Quot.sound]
+'QEC.phenom_D2_kernel_ML' depends on axioms: [propext, Classical.choice, Quot.sound]

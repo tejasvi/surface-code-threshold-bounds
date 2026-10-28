@@ -1,0 +1,28 @@
+20:39:15 start unit=job-t10h stop=6900 tmax=7200
+22:31:43 start unit=job-t10h stop=6900 tmax=7200
+22:44:47 held E2_346: lean 253131 at 6926 s, timeout 253091 stopped
+22:44:47 held E3_474: lean 253416 at 6926 s, timeout 253385 stopped
+22:44:47 held E12_346: lean 255433 at 6926 s, timeout 255419 stopped
+22:44:48 held E13_474: lean 257706 at 6922 s, timeout 257703 stopped
+22:44:48 held E18_474: lean 259829 at 6921 s, timeout 259818 stopped
+22:44:56 held E2_346: lean 253131 at 6935 s, timeout 253091 stopped
+22:44:56 held E3_474: lean 253416 at 6936 s, timeout 253385 stopped
+22:44:56 held E12_346: lean 255433 at 6935 s, timeout 255419 stopped
+22:44:57 held E13_474: lean 257706 at 6931 s, timeout 257703 stopped
+22:44:57 held E18_474: lean 259829 at 6930 s, timeout 259818 stopped
+22:45:37 released E2_346: lean state Z status 0, timeout at 6976 s
+22:45:37 released E3_474: lean state Z status 0, timeout at 6977 s
+22:45:46 released E12_346: lean state Z status 0, timeout at 6985 s
+22:45:47 released E2_346: lean state gone status ?, timeout at ? s
+22:45:47 released E3_474: lean state gone status ?, timeout at ? s
+22:46:49 released E18_474: lean state Z status 0, timeout at 7042 s
+22:46:50 released E12_346: lean state gone status ?, timeout at ? s
+22:46:50 released E13_474: lean state Z status 0, timeout at 7044 s
+22:46:59 released E18_474: lean state gone status ?, timeout at ? s
+22:46:59 released E13_474: lean state gone status ?, timeout at ? s
+23:02:37 held E27_346: lean 345383 at 6951 s, timeout 345382 stopped
+23:02:52 held E27_346: lean 345383 at 6966 s, timeout 345382 stopped
+23:03:46 released E27_346: lean state Z status 0, timeout at 7020 s
+23:04:42 released E27_346: lean state gone status ?, timeout at ? s
+23:28:21 unit inactive, nothing held: exit
+23:28:26 unit inactive, nothing held: exit

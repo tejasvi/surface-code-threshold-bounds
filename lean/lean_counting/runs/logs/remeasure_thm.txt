@@ -1,0 +1,7 @@
+PlanarA8K 22.32 2535920 0 native_axioms=0
+PhenomK 2.60 2576836 0 native_axioms=0
+Planar 2.40 2555944 0 native_axioms=1
+Phenom 2.40 2543884 0 native_axioms=1
+Toric 2.71 2543588 0 native_axioms=107
+RotatedB 3.20 2574668 0 native_axioms=252
+Toric10 3.30 2572416 0 native_axioms=418

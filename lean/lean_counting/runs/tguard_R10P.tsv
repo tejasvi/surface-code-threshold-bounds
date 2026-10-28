@@ -1,0 +1,2 @@
+module	runtime_s	lean_exit_status	olean_sha256	action
+# R10P: scripts/box_tguard.sh ran next to the check runs on all 12 machines from 19:34Z; no module reached its 6,900 s trigger (longest module E13_254, 6,620 s, in runs/logs/kchecks_R10P.part*.log), so it acted on none.

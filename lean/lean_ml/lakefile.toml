@@ -1,0 +1,22 @@
+name = "QECML"
+version = "0.1.0"
+keywords = ["math"]
+defaultTargets = ["QECML"]
+
+[leanOptions]
+pp.unicode.fun = true
+relaxedAutoImplicit = false
+autoImplicit = false
+weak.linter.style.header = false
+maxSynthPendingDepth = 3
+
+# QECML: the optimal threshold of the planar surface code (Theorem B in the sources), with the program properties and
+# the statistical input of the certificate as named hypotheses. Mathlib is pinned by lake-manifest.json (commit
+# c55e6e786f49).
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "v4.35.0-rc3"
+
+[[lean_lib]]
+name = "QECML"

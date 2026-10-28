@@ -1,0 +1,17 @@
+P3 rc=0 10 s
+P2 rc=0 10 s
+P4 rc=0 10 s
+P5 rc=0 10 s
+P6 rc=0 10 s
+P7 rc=0 10 s
+P0 rc=0 9 s
+P1 rc=0 9 s
+P2 rc=0 9 s
+P5 rc=0 9 s
+P7 rc=0 9 s
+P4 rc=0 9 s
+P6 rc=0 9 s
+P3 rc=0 9 s
+All rc=0 6 s
+theorem rc=0
+done

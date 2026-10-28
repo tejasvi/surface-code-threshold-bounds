@@ -1,0 +1,4 @@
+23:49:10 3664 RN oleans of R10P dated before @1793022960
+23:49:13 moved to stale_R10P_RN/
+01:15:27 rebuilt: last ktrun status OK for 3664 of 3664; olean missing 0; byte-identical to the old one 76; different 3588
+01:19:00 assembly: ktasm R10P done 01:18:55 theorem RotatedBK rc=0 4.99 s 10374956 KB 

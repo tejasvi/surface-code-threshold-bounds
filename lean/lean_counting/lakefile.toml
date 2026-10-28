@@ -1,0 +1,28 @@
+name = "QECCount"
+version = "0.1.0"
+keywords = ["math"]
+defaultTargets = ["QEC"]
+
+[leanOptions]
+pp.unicode.fun = true
+relaxedAutoImplicit = false
+autoImplicit = false
+weak.linter.style.header = false
+maxSynthPendingDepth = 3
+
+# Counting bounds for surface-code thresholds (code capacity and phenomenological noise): labelled-path counting
+# with exact integer certificates. Mathlib is pinned by lake-manifest.json (commit c55e6e786f49).
+# The modules QEC/Graph/Basic.lean and QEC/Graph/PathExists.lean are copies from an earlier formalization.
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "v4.35.0-rc3"
+
+[[lean_lib]]
+name = "QEC"
+
+# Computational core of the certificate checks: imports only Lean core, compiled to native code
+# (`precompileModules`) so that `native_decide` runs it at native speed when loaded with --load-dynlib.
+[[lean_lib]]
+name = "QECCountComp"
+precompileModules = true

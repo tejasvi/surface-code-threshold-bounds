@@ -1,0 +1,10 @@
+olean_sha256.txt: sha256 of the oleans and shared libraries of the runs on the build machines (paths relative to the
+machine's scratch directory: lc = data, kernel data, check and assembly modules; lc2 = proof modules; kc = kernel route v1 runs (KA8,
+D2K6); nc = compiled-evaluation run of R10).
+
+How they were built, which matters for a byte comparison: the check and assembly oleans (QEC/KChecks, QEC/Checks) were
+written by plain `lean -o`; the data, kernel data, proof and core modules were built by lake. A lake-built olean is
+96 bytes longer than a plain `lean -o` build of the same source (lake metadata; imports, constants and extension
+entries are identical), so compare lake builds with lake builds and plain builds with plain builds. The release edited doc comments of a
+few modules (README.md lists the changed files); their oleans differ in the stored doc strings only, with the
+same declarations.

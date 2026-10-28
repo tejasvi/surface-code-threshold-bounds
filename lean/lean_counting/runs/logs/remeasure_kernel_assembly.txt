@@ -1,0 +1,10 @@
+QEC/KChecks/A10K2/All.lean 5.73 s 4879112 KB rc=0
+Command exited with non-zero status 1
+QEC/Thm/PlanarK10.lean 0.03 s 82516 KB rc=1
+QEC/KChecks/D2M8K2/All.lean 3.23 s 5234384 KB rc=0
+Command exited with non-zero status 1
+QEC/Thm/PhenomK8.lean 0.03 s 82388 KB rc=1
+remeasure done
+PlanarK10 1.82 s 4143636 KB rc=0
+PhenomK8 2.18 s 5053420 KB rc=0
+remeasure2 done
