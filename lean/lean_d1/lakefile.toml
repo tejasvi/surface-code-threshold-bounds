@@ -1,0 +1,22 @@
+name = "QECD1"
+version = "0.1.0"
+keywords = ["math"]
+defaultTargets = ["QECD1"]
+
+[leanOptions]
+pp.unicode.fun = true
+relaxedAutoImplicit = false
+autoImplicit = false
+weak.linter.style.header = false
+maxSynthPendingDepth = 3
+
+# QECD1: the bound on the maximum-likelihood failure probability of the planar surface code under measurement errors
+# (phenomenological noise) and its threshold, with the program properties and the statistical input of the
+# certificate as named hypotheses. Mathlib is pinned by lake-manifest.json (commit c55e6e786f49).
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "v4.35.0-rc3"
+
+[[lean_lib]]
+name = "QECD1"
