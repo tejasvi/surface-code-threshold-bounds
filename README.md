@@ -8,9 +8,9 @@ Section 2. The registrations, programs, certificate data and check outputs are i
 | path | content |
 |---|---|
 | `paper/main.pdf`, `paper/main.tex` | the paper and its source, bibliography included |
-| `lean/lean_ml/` | Lean proofs of Theorem 2.1 (library QECML) |
+| `lean/lean_ml/` | Lean proofs of Theorem 2.5 (library QECML) |
 | `lean/lean_d1/` | Lean proofs of Theorem 2.6 (library QECD1) |
-| `lean/lean_counting/` | Lean proofs of Theorems 2.2 to 2.5 (libraries QEC and QECCountComp) |
+| `lean/lean_counting/` | Lean proofs of Theorems 2.1 to 2.4 (libraries QEC and QECCountComp) |
 | `lean/*.SHA256SUMS` | the SHA-256 of every file of each Lean tree; the paper gives the SHA-256 of these three files |
 | `lean/*_axioms.txt` | the axioms on which each main theorem depends, as printed by Lean |
 

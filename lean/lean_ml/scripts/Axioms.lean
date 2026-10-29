@@ -41,3 +41,14 @@ Run from the project root after `lake build`: `lake env lean scripts/Axioms.lean
 #print axioms QECML.d1_cp
 #print axioms QECML.d1_cp_upper_k4
 #print axioms QECML.d1_cp_tight_k4
+
+-- the threshold along subexponential (in particular polynomial) widths, and its confidence statement
+#print axioms QECML.pMLPlanar_tendsto_zero_subexp
+#print axioms QECML.pMLPlanar_exp_decay_subexp
+#print axioms QECML.pMLPlanar_tendsto_zero_poly
+#print axioms QECML.pMLPlanar_tendsto_zero_of_concl
+#print axioms QECML.pMLPlanar_exp_decay_of_concl
+#print axioms QECML.threshold_a12_general_certified
+#print axioms QECML.threshold_a12_general_familywise
+#print axioms QECML.subExp_of_le_poly
+#print axioms QECML.subExp_of_log
